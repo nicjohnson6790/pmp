@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { RouterLink, RouterView } from 'vue-router'
 import { authState, initializeAuth, isAuthenticated, login, logout, register } from './auth'
-import PaletteWorkspace from './components/PaletteWorkspace.vue'
 
 const mode = ref<'login' | 'register'>('login')
-const activeView = ref<'home' | 'palettes'>('palettes')
 const isBusy = ref(false)
 const errorMessage = ref('')
 
@@ -118,7 +117,7 @@ async function logoutToLogin() {
 
   <div v-else class="app-shell">
     <header class="top-header">
-      <a class="header-logo" href="/" aria-label="Home">PMP</a>
+      <RouterLink class="header-logo" to="/" aria-label="Home">PMP</RouterLink>
       <div class="user-area">
         <span>{{ authState.userName }}</span>
         <button class="secondary-button" type="button" @click="logoutToLogin">Log out</button>
@@ -127,27 +126,18 @@ async function logoutToLogin() {
 
     <aside class="side-nav" aria-label="Primary navigation">
       <nav>
-        <button class="nav-link" :class="{ active: activeView === 'home' }" type="button" @click="activeView = 'home'">
+        <RouterLink class="nav-link" to="/" active-class="active">
           Home
-        </button>
-        <button
-          class="nav-link"
-          :class="{ active: activeView === 'palettes' }"
-          type="button"
-          @click="activeView = 'palettes'"
-        >
+        </RouterLink>
+        <RouterLink class="nav-link" to="/palettes" active-class="active">
           Palettes
-        </button>
+        </RouterLink>
       </nav>
     </aside>
 
     <div class="workspace">
       <main class="content-area">
-        <div v-if="activeView === 'home'" class="home-panel">
-          <h1>Workspace</h1>
-          <p>Choose a tool from the sidebar.</p>
-        </div>
-        <PaletteWorkspace v-else-if="activeView === 'palettes'" />
+        <RouterView />
       </main>
     </div>
   </div>
