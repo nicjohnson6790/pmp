@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="pmp.AuthDb/pmp.AuthDb.csproj" />
+  <Project Path="pmp.client/pmp.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="pmp.Server/pmp.Server.csproj" />
+</Solution>

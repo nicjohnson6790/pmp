@@ -1,0 +1,17 @@
+:root {
+  --color-green-950: #06281f;
+  --color-green-900: #0a3a2c;
+  --color-green-800: #0e513d;
+  --color-green-700: #12684d;
+  --color-green-600: #16845f;
+  --color-green-500: #20a779;
+  --color-green-100: #dff7ea;
+  --color-green-50: #f2fbf5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef7f1;
+  --color-border: #bddcca;
+  --color-text: #123126;
+  --color-text-muted: #567064;
+  --color-danger: #b42318;
+  --shadow-modal: 0 24px 80px rgba(6, 40, 31, 0.28);
+}

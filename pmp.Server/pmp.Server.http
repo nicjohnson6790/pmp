@@ -1,0 +1,6 @@
+@pmp.Server_HostAddress = https://localhost:7247
+
+GET {{pmp.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

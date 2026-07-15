@@ -1,0 +1,30 @@
+{
+  "runtime": "Net80",
+  "defaultVariables": "Configuration=Debug",
+  "documentGenerator": {
+    "aspNetCoreToOpenApi": {
+      "project": "pmp.Server.csproj",
+      "configuration": "$(Configuration)",
+      "noBuild": true,
+      "documentName": "v1",
+      "aspNetCoreEnvironment": "Development",
+      "output": "../pmp.client/src/api/generated/openapi.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToTypeScriptClient": {
+      "className": "{controller}Client",
+      "template": "Fetch",
+      "operationGenerationMode": "MultipleClientsFromFirstTagAndOperationId",
+      "generateClientClasses": true,
+      "generateClientInterfaces": true,
+      "generateDtoTypes": true,
+      "generateOptionalParameters": true,
+      "markOptionalProperties": true,
+      "dateTimeType": "Date",
+      "nullValue": "Undefined",
+      "typeScriptVersion": 5.0,
+      "output": "../pmp.client/src/api/generated/api-client.ts"
+    }
+  }
+}
