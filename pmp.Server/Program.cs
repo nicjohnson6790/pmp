@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using pmp.AppDb;
 using pmp.AuthDb;
 using pmp.Server.Auth;
 
@@ -22,6 +23,9 @@ if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey))
 
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("AuthDb")));
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("AppDb")));
 
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>

@@ -27,6 +27,7 @@
     <ProjectReference Include="..\pmp.client\pmp.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\pmp.AppDb\pmp.AppDb.csproj" />
     <ProjectReference Include="..\pmp.AuthDb\pmp.AuthDb.csproj" />
   </ItemGroup>
 

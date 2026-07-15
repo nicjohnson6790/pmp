@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="pmp.AppDb/pmp.AppDb.csproj" />
   <Project Path="pmp.AuthDb/pmp.AuthDb.csproj" />
   <Project Path="pmp.client/pmp.client.esproj">
     <Build />

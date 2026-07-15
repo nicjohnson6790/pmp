@@ -185,6 +185,235 @@ export class AuthClient implements IAuthClient {
     }
 }
 
+export interface IPalettesClient {
+
+    palettes_GetPalettes(): Promise<PaletteSummaryResponse[]>;
+
+    palettes_CreatePalette(request: PaletteSaveRequest): Promise<PaletteDetailResponse>;
+
+    palettes_GetPalette(id: number): Promise<PaletteDetailResponse>;
+
+    palettes_UpdatePalette(id: number, request: PaletteSaveRequest): Promise<PaletteDetailResponse>;
+
+    palettes_ArchivePalette(id: number): Promise<FileResponse>;
+}
+
+export class PalettesClient implements IPalettesClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    palettes_GetPalettes(): Promise<PaletteSummaryResponse[]> {
+        let url_ = this.baseUrl + "/api/Palettes";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPalettes_GetPalettes(_response);
+        });
+    }
+
+    protected processPalettes_GetPalettes(response: Response): Promise<PaletteSummaryResponse[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(PaletteSummaryResponse.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PaletteSummaryResponse[]>(null as any);
+    }
+
+    palettes_CreatePalette(request: PaletteSaveRequest): Promise<PaletteDetailResponse> {
+        let url_ = this.baseUrl + "/api/Palettes";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPalettes_CreatePalette(_response);
+        });
+    }
+
+    protected processPalettes_CreatePalette(response: Response): Promise<PaletteDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 201) {
+            return response.text().then((_responseText) => {
+            let result201: any = null;
+            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result201 = PaletteDetailResponse.fromJS(resultData201);
+            return result201;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PaletteDetailResponse>(null as any);
+    }
+
+    palettes_GetPalette(id: number): Promise<PaletteDetailResponse> {
+        let url_ = this.baseUrl + "/api/Palettes/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPalettes_GetPalette(_response);
+        });
+    }
+
+    protected processPalettes_GetPalette(response: Response): Promise<PaletteDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PaletteDetailResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PaletteDetailResponse>(null as any);
+    }
+
+    palettes_UpdatePalette(id: number, request: PaletteSaveRequest): Promise<PaletteDetailResponse> {
+        let url_ = this.baseUrl + "/api/Palettes/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPalettes_UpdatePalette(_response);
+        });
+    }
+
+    protected processPalettes_UpdatePalette(response: Response): Promise<PaletteDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PaletteDetailResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PaletteDetailResponse>(null as any);
+    }
+
+    palettes_ArchivePalette(id: number): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/Palettes/{id}/archive";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPalettes_ArchivePalette(_response);
+        });
+    }
+
+    protected processPalettes_ArchivePalette(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+}
+
 export interface IWeatherForecastClient {
 
     weatherForecast_Get(): Promise<WeatherForecast[]>;
@@ -416,6 +645,303 @@ export class RefreshTokenRequest implements IRefreshTokenRequest {
 
 export interface IRefreshTokenRequest {
     refreshToken: string;
+}
+
+export class PaletteSummaryResponse implements IPaletteSummaryResponse {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    updatedUtc?: Date;
+    colors?: PaletteColorResponse[];
+
+    constructor(data?: IPaletteSummaryResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.description = _data["description"];
+            this.updatedUtc = _data["updatedUtc"] ? new Date(_data["updatedUtc"].toString()) : undefined as any;
+            if (Array.isArray(_data["colors"])) {
+                this.colors = [] as any;
+                for (let item of _data["colors"])
+                    this.colors!.push(PaletteColorResponse.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): PaletteSummaryResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteSummaryResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["description"] = this.description;
+        data["updatedUtc"] = this.updatedUtc ? this.updatedUtc.toISOString() : undefined as any;
+        if (Array.isArray(this.colors)) {
+            data["colors"] = [];
+            for (let item of this.colors)
+                data["colors"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IPaletteSummaryResponse {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    updatedUtc?: Date;
+    colors?: PaletteColorResponse[];
+}
+
+export class PaletteColorResponse implements IPaletteColorResponse {
+    id?: number;
+    name?: string;
+    hex?: string;
+    sortOrder?: number;
+
+    constructor(data?: IPaletteColorResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.hex = _data["hex"];
+            this.sortOrder = _data["sortOrder"];
+        }
+    }
+
+    static fromJS(data: any): PaletteColorResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteColorResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["hex"] = this.hex;
+        data["sortOrder"] = this.sortOrder;
+        return data;
+    }
+}
+
+export interface IPaletteColorResponse {
+    id?: number;
+    name?: string;
+    hex?: string;
+    sortOrder?: number;
+}
+
+export class PaletteDetailResponse extends PaletteSummaryResponse implements IPaletteDetailResponse {
+    createdUtc?: Date;
+
+    constructor(data?: IPaletteDetailResponse) {
+        super(data);
+    }
+
+    override init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.createdUtc = _data["createdUtc"] ? new Date(_data["createdUtc"].toString()) : undefined as any;
+        }
+    }
+
+    static override fromJS(data: any): PaletteDetailResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteDetailResponse();
+        result.init(data);
+        return result;
+    }
+
+    override toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["createdUtc"] = this.createdUtc ? this.createdUtc.toISOString() : undefined as any;
+        super.toJSON(data);
+        return data;
+    }
+}
+
+export interface IPaletteDetailResponse extends IPaletteSummaryResponse {
+    createdUtc?: Date;
+}
+
+export class ProblemDetails implements IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IProblemDetails) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.type = _data["type"];
+            this.title = _data["title"];
+            this.status = _data["status"];
+            this.detail = _data["detail"];
+            this.instance = _data["instance"];
+        }
+    }
+
+    static fromJS(data: any): ProblemDetails {
+        data = typeof data === 'object' ? data : {};
+        let result = new ProblemDetails();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["type"] = this.type;
+        data["title"] = this.title;
+        data["status"] = this.status;
+        data["detail"] = this.detail;
+        data["instance"] = this.instance;
+        return data;
+    }
+}
+
+export interface IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
+}
+
+export class PaletteSaveRequest implements IPaletteSaveRequest {
+    name!: string;
+    description?: string | undefined;
+    colors?: PaletteColorSaveRequest[];
+
+    constructor(data?: IPaletteSaveRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.description = _data["description"];
+            if (Array.isArray(_data["colors"])) {
+                this.colors = [] as any;
+                for (let item of _data["colors"])
+                    this.colors!.push(PaletteColorSaveRequest.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): PaletteSaveRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteSaveRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["description"] = this.description;
+        if (Array.isArray(this.colors)) {
+            data["colors"] = [];
+            for (let item of this.colors)
+                data["colors"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IPaletteSaveRequest {
+    name: string;
+    description?: string | undefined;
+    colors?: PaletteColorSaveRequest[];
+}
+
+export class PaletteColorSaveRequest implements IPaletteColorSaveRequest {
+    name!: string;
+    hex!: string;
+
+    constructor(data?: IPaletteColorSaveRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.hex = _data["hex"];
+        }
+    }
+
+    static fromJS(data: any): PaletteColorSaveRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteColorSaveRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["hex"] = this.hex;
+        return data;
+    }
+}
+
+export interface IPaletteColorSaveRequest {
+    name: string;
+    hex: string;
 }
 
 export class WeatherForecast implements IWeatherForecast {

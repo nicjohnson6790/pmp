@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { authState, initializeAuth, isAuthenticated, login, logout, register } from './auth'
+import PaletteWorkspace from './components/PaletteWorkspace.vue'
 
 const mode = ref<'login' | 'register'>('login')
+const activeView = ref<'home' | 'palettes'>('palettes')
 const isBusy = ref(false)
 const errorMessage = ref('')
 
@@ -125,13 +127,27 @@ async function logoutToLogin() {
 
     <aside class="side-nav" aria-label="Primary navigation">
       <nav>
-        <a class="nav-link active" href="/">Home</a>
+        <button class="nav-link" :class="{ active: activeView === 'home' }" type="button" @click="activeView = 'home'">
+          Home
+        </button>
+        <button
+          class="nav-link"
+          :class="{ active: activeView === 'palettes' }"
+          type="button"
+          @click="activeView = 'palettes'"
+        >
+          Palettes
+        </button>
       </nav>
     </aside>
 
     <div class="workspace">
       <main class="content-area">
-        <p>Logged in.</p>
+        <div v-if="activeView === 'home'" class="home-panel">
+          <h1>Workspace</h1>
+          <p>Choose a tool from the sidebar.</p>
+        </div>
+        <PaletteWorkspace v-else-if="activeView === 'palettes'" />
       </main>
     </div>
   </div>
