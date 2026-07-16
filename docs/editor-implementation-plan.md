@@ -15,7 +15,9 @@ This plan turns the feature TODO into buildable slices. The intended order is co
 
 Palette CRUD is the first working product slice. `pmp.AppDb` exists for app-domain data, palette tables have an initial migration, the server exposes authenticated palette endpoints, NSwag generates the palette client, and the Vue app has a usable palette workspace with create/edit/archive, color validation, swatches, and reorder controls.
 
-Next implementation focus: card CRUD/editor using the saved palettes.
+Card CRUD/editor is now the second working product slice. The app domain has a `Card` entity and `AddCards` migration, the server exposes authenticated card list/detail/create/update/archive endpoints, NSwag generates the card client, and the Vue app has a routed card workspace with list, edit/archive, palette selection, skip/hint numbers, action type, deck order, preview, and validation. The local AppDb needs the `AddCards` migration applied before using card endpoints.
+
+Next implementation focus: basic tile model/browser and the first shared drawing document/editor groundwork.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -148,6 +150,7 @@ Cards depend on palettes and become the entry point into tile/card actions.
 ### Implementation Notes
 
 - Start with text/palette/numbers/action. Add card artwork once the shared drawing editor exists.
+- The first pass can use a simple palette select, but later replace it with a palette explorer modal showing favorited palettes plus searchable palettes by creator/user and name.
 - Shuffle cards can be system-like cards in the first pass unless we decide they need artwork/palette.
 - User-created proposed cards and voting stay out of the first CRUD pass, but the schema should not block them later.
 

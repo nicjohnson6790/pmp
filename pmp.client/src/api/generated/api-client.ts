@@ -185,6 +185,235 @@ export class AuthClient implements IAuthClient {
     }
 }
 
+export interface ICardsClient {
+
+    cards_GetCards(): Promise<CardSummaryResponse[]>;
+
+    cards_CreateCard(request: CardSaveRequest): Promise<CardDetailResponse>;
+
+    cards_GetCard(id: number): Promise<CardDetailResponse>;
+
+    cards_UpdateCard(id: number, request: CardSaveRequest): Promise<CardDetailResponse>;
+
+    cards_ArchiveCard(id: number): Promise<FileResponse>;
+}
+
+export class CardsClient implements ICardsClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    cards_GetCards(): Promise<CardSummaryResponse[]> {
+        let url_ = this.baseUrl + "/api/Cards";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCards_GetCards(_response);
+        });
+    }
+
+    protected processCards_GetCards(response: Response): Promise<CardSummaryResponse[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CardSummaryResponse.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CardSummaryResponse[]>(null as any);
+    }
+
+    cards_CreateCard(request: CardSaveRequest): Promise<CardDetailResponse> {
+        let url_ = this.baseUrl + "/api/Cards";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCards_CreateCard(_response);
+        });
+    }
+
+    protected processCards_CreateCard(response: Response): Promise<CardDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 201) {
+            return response.text().then((_responseText) => {
+            let result201: any = null;
+            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result201 = CardDetailResponse.fromJS(resultData201);
+            return result201;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CardDetailResponse>(null as any);
+    }
+
+    cards_GetCard(id: number): Promise<CardDetailResponse> {
+        let url_ = this.baseUrl + "/api/Cards/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCards_GetCard(_response);
+        });
+    }
+
+    protected processCards_GetCard(response: Response): Promise<CardDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = CardDetailResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CardDetailResponse>(null as any);
+    }
+
+    cards_UpdateCard(id: number, request: CardSaveRequest): Promise<CardDetailResponse> {
+        let url_ = this.baseUrl + "/api/Cards/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCards_UpdateCard(_response);
+        });
+    }
+
+    protected processCards_UpdateCard(response: Response): Promise<CardDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = CardDetailResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CardDetailResponse>(null as any);
+    }
+
+    cards_ArchiveCard(id: number): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/Cards/{id}/archive";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCards_ArchiveCard(_response);
+        });
+    }
+
+    protected processCards_ArchiveCard(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+}
+
 export interface IPalettesClient {
 
     palettes_GetPalettes(): Promise<PaletteSummaryResponse[]>;
@@ -647,14 +876,84 @@ export interface IRefreshTokenRequest {
     refreshToken: string;
 }
 
-export class PaletteSummaryResponse implements IPaletteSummaryResponse {
+export class CardSummaryResponse implements ICardSummaryResponse {
+    id?: number;
+    title?: string;
+    prompt?: string;
+    paletteId?: number;
+    palette?: CardPaletteResponse;
+    skipNumber?: number;
+    hintNumber?: number;
+    actionType?: string;
+    deckOrder?: number;
+    updatedUtc?: Date;
+
+    constructor(data?: ICardSummaryResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.title = _data["title"];
+            this.prompt = _data["prompt"];
+            this.paletteId = _data["paletteId"];
+            this.palette = _data["palette"] ? CardPaletteResponse.fromJS(_data["palette"]) : undefined as any;
+            this.skipNumber = _data["skipNumber"];
+            this.hintNumber = _data["hintNumber"];
+            this.actionType = _data["actionType"];
+            this.deckOrder = _data["deckOrder"];
+            this.updatedUtc = _data["updatedUtc"] ? new Date(_data["updatedUtc"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): CardSummaryResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CardSummaryResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["title"] = this.title;
+        data["prompt"] = this.prompt;
+        data["paletteId"] = this.paletteId;
+        data["palette"] = this.palette ? this.palette.toJSON() : undefined as any;
+        data["skipNumber"] = this.skipNumber;
+        data["hintNumber"] = this.hintNumber;
+        data["actionType"] = this.actionType;
+        data["deckOrder"] = this.deckOrder;
+        data["updatedUtc"] = this.updatedUtc ? this.updatedUtc.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ICardSummaryResponse {
+    id?: number;
+    title?: string;
+    prompt?: string;
+    paletteId?: number;
+    palette?: CardPaletteResponse;
+    skipNumber?: number;
+    hintNumber?: number;
+    actionType?: string;
+    deckOrder?: number;
+    updatedUtc?: Date;
+}
+
+export class CardPaletteResponse implements ICardPaletteResponse {
     id?: number;
     name?: string;
-    description?: string | undefined;
-    updatedUtc?: Date;
     colors?: PaletteColorResponse[];
 
-    constructor(data?: IPaletteSummaryResponse) {
+    constructor(data?: ICardPaletteResponse) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -667,8 +966,6 @@ export class PaletteSummaryResponse implements IPaletteSummaryResponse {
         if (_data) {
             this.id = _data["id"];
             this.name = _data["name"];
-            this.description = _data["description"];
-            this.updatedUtc = _data["updatedUtc"] ? new Date(_data["updatedUtc"].toString()) : undefined as any;
             if (Array.isArray(_data["colors"])) {
                 this.colors = [] as any;
                 for (let item of _data["colors"])
@@ -677,9 +974,9 @@ export class PaletteSummaryResponse implements IPaletteSummaryResponse {
         }
     }
 
-    static fromJS(data: any): PaletteSummaryResponse {
+    static fromJS(data: any): CardPaletteResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new PaletteSummaryResponse();
+        let result = new CardPaletteResponse();
         result.init(data);
         return result;
     }
@@ -688,8 +985,6 @@ export class PaletteSummaryResponse implements IPaletteSummaryResponse {
         data = typeof data === 'object' ? data : {};
         data["id"] = this.id;
         data["name"] = this.name;
-        data["description"] = this.description;
-        data["updatedUtc"] = this.updatedUtc ? this.updatedUtc.toISOString() : undefined as any;
         if (Array.isArray(this.colors)) {
             data["colors"] = [];
             for (let item of this.colors)
@@ -699,11 +994,9 @@ export class PaletteSummaryResponse implements IPaletteSummaryResponse {
     }
 }
 
-export interface IPaletteSummaryResponse {
+export interface ICardPaletteResponse {
     id?: number;
     name?: string;
-    description?: string | undefined;
-    updatedUtc?: Date;
     colors?: PaletteColorResponse[];
 }
 
@@ -755,10 +1048,10 @@ export interface IPaletteColorResponse {
     sortOrder?: number;
 }
 
-export class PaletteDetailResponse extends PaletteSummaryResponse implements IPaletteDetailResponse {
+export class CardDetailResponse extends CardSummaryResponse implements ICardDetailResponse {
     createdUtc?: Date;
 
-    constructor(data?: IPaletteDetailResponse) {
+    constructor(data?: ICardDetailResponse) {
         super(data);
     }
 
@@ -769,9 +1062,9 @@ export class PaletteDetailResponse extends PaletteSummaryResponse implements IPa
         }
     }
 
-    static override fromJS(data: any): PaletteDetailResponse {
+    static override fromJS(data: any): CardDetailResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new PaletteDetailResponse();
+        let result = new CardDetailResponse();
         result.init(data);
         return result;
     }
@@ -784,7 +1077,7 @@ export class PaletteDetailResponse extends PaletteSummaryResponse implements IPa
     }
 }
 
-export interface IPaletteDetailResponse extends IPaletteSummaryResponse {
+export interface ICardDetailResponse extends ICardSummaryResponse {
     createdUtc?: Date;
 }
 
@@ -850,6 +1143,159 @@ export interface IProblemDetails {
     instance?: string | undefined;
 
     [key: string]: any;
+}
+
+export class CardSaveRequest implements ICardSaveRequest {
+    title!: string;
+    prompt!: string;
+    paletteId?: number;
+    skipNumber?: number;
+    hintNumber?: number;
+    actionType!: string;
+    deckOrder?: number;
+
+    constructor(data?: ICardSaveRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.title = _data["title"];
+            this.prompt = _data["prompt"];
+            this.paletteId = _data["paletteId"];
+            this.skipNumber = _data["skipNumber"];
+            this.hintNumber = _data["hintNumber"];
+            this.actionType = _data["actionType"];
+            this.deckOrder = _data["deckOrder"];
+        }
+    }
+
+    static fromJS(data: any): CardSaveRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CardSaveRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["title"] = this.title;
+        data["prompt"] = this.prompt;
+        data["paletteId"] = this.paletteId;
+        data["skipNumber"] = this.skipNumber;
+        data["hintNumber"] = this.hintNumber;
+        data["actionType"] = this.actionType;
+        data["deckOrder"] = this.deckOrder;
+        return data;
+    }
+}
+
+export interface ICardSaveRequest {
+    title: string;
+    prompt: string;
+    paletteId?: number;
+    skipNumber?: number;
+    hintNumber?: number;
+    actionType: string;
+    deckOrder?: number;
+}
+
+export class PaletteSummaryResponse implements IPaletteSummaryResponse {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    updatedUtc?: Date;
+    colors?: PaletteColorResponse[];
+
+    constructor(data?: IPaletteSummaryResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.description = _data["description"];
+            this.updatedUtc = _data["updatedUtc"] ? new Date(_data["updatedUtc"].toString()) : undefined as any;
+            if (Array.isArray(_data["colors"])) {
+                this.colors = [] as any;
+                for (let item of _data["colors"])
+                    this.colors!.push(PaletteColorResponse.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): PaletteSummaryResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteSummaryResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["description"] = this.description;
+        data["updatedUtc"] = this.updatedUtc ? this.updatedUtc.toISOString() : undefined as any;
+        if (Array.isArray(this.colors)) {
+            data["colors"] = [];
+            for (let item of this.colors)
+                data["colors"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IPaletteSummaryResponse {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    updatedUtc?: Date;
+    colors?: PaletteColorResponse[];
+}
+
+export class PaletteDetailResponse extends PaletteSummaryResponse implements IPaletteDetailResponse {
+    createdUtc?: Date;
+
+    constructor(data?: IPaletteDetailResponse) {
+        super(data);
+    }
+
+    override init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.createdUtc = _data["createdUtc"] ? new Date(_data["createdUtc"].toString()) : undefined as any;
+        }
+    }
+
+    static override fromJS(data: any): PaletteDetailResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PaletteDetailResponse();
+        result.init(data);
+        return result;
+    }
+
+    override toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["createdUtc"] = this.createdUtc ? this.createdUtc.toISOString() : undefined as any;
+        super.toJSON(data);
+        return data;
+    }
+}
+
+export interface IPaletteDetailResponse extends IPaletteSummaryResponse {
+    createdUtc?: Date;
 }
 
 export class PaletteSaveRequest implements IPaletteSaveRequest {

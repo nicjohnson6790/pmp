@@ -245,6 +245,10 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
   - Hint number selector from `1` to `9`.
   - Card action/type selector.
   - Palette picker with swatch preview.
+  - Future palette explorer modal instead of the simple select box:
+    - Show the user's favorited palettes first.
+    - Search palettes by creator/user and palette name.
+    - Show palette swatches and enough metadata to choose confidently.
   - Optional category/difficulty fields if the backend includes them.
 - Show how the card will appear in the tile editor.
 - Prevent saving a card without an available palette.
@@ -359,6 +363,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Existing cards can receive review votes and may be up for removal during the weekly vote.
 - Palette removal is not part of this removal process.
 - Palette changes also require voting.
+- Palette discovery should support favoriting palettes and searching public/shared palettes by creator/user and palette name so card authors are not limited to a local select box.
 - This governance system is out of scope for the first pass, but the card model should avoid choices that make voting/review difficult later.
 
 ## Suggested Build Order

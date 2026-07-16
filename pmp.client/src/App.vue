@@ -132,6 +132,9 @@ async function logoutToLogin() {
         <RouterLink class="nav-link" to="/palettes" active-class="active">
           Palettes
         </RouterLink>
+        <RouterLink class="nav-link" to="/cards" active-class="active">
+          Cards
+        </RouterLink>
       </nav>
     </aside>
 

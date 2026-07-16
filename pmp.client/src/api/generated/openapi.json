@@ -135,6 +135,176 @@
         }
       }
     },
+    "/api/Cards": {
+      "get": {
+        "tags": [
+          "Cards"
+        ],
+        "operationId": "Cards_GetCards",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CardSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cards"
+        ],
+        "operationId": "Cards_CreateCard",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardSaveRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Cards/{id}": {
+      "get": {
+        "tags": [
+          "Cards"
+        ],
+        "operationId": "Cards_GetCard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Cards"
+        ],
+        "operationId": "Cards_UpdateCard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardSaveRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Cards/{id}/archive": {
+      "post": {
+        "tags": [
+          "Cards"
+        ],
+        "operationId": "Cards_ArchiveCard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Palettes": {
       "get": {
         "tags": [
@@ -412,7 +582,49 @@
           }
         }
       },
-      "PaletteSummaryResponse": {
+      "CardSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "paletteId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "palette": {
+            "$ref": "#/components/schemas/CardPaletteResponse"
+          },
+          "skipNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hintNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "deckOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updatedUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CardPaletteResponse": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -422,14 +634,6 @@
           },
           "name": {
             "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "updatedUtc": {
-            "type": "string",
-            "format": "date-time"
           },
           "colors": {
             "type": "array",
@@ -459,10 +663,10 @@
           }
         }
       },
-      "PaletteDetailResponse": {
+      "CardDetailResponse": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/PaletteSummaryResponse"
+            "$ref": "#/components/schemas/CardSummaryResponse"
           },
           {
             "type": "object",
@@ -504,6 +708,93 @@
             "nullable": true
           }
         }
+      },
+      "CardSaveRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "prompt",
+          "actionType"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "paletteId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipNumber": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 9.0,
+            "minimum": 1.0
+          },
+          "hintNumber": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 9.0,
+            "minimum": 1.0
+          },
+          "actionType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deckOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PaletteSummaryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaletteColorResponse"
+            }
+          }
+        }
+      },
+      "PaletteDetailResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaletteSummaryResponse"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "createdUtc": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ]
       },
       "PaletteSaveRequest": {
         "type": "object",

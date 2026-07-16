@@ -17,4 +17,6 @@ public class Palette
     public DateTimeOffset? ArchivedUtc { get; set; }
 
     public List<PaletteColor> Colors { get; set; } = [];
+
+    public List<Card> Cards { get; set; } = [];
 }

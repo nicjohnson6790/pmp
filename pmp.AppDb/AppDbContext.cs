@@ -4,6 +4,8 @@ namespace pmp.AppDb;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Card> Cards => Set<Card>();
+
     public DbSet<Palette> Palettes => Set<Palette>();
 
     public DbSet<PaletteColor> PaletteColors => Set<PaletteColor>();
@@ -51,6 +53,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             entity.HasIndex(color => new { color.PaletteId, color.Name })
                 .IsUnique();
+        });
+
+        builder.Entity<Card>(entity =>
+        {
+            entity.HasKey(card => card.Id);
+
+            entity.Property(card => card.Title)
+                .IsRequired()
+                .HasMaxLength(160);
+
+            entity.Property(card => card.Prompt)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            entity.Property(card => card.ActionType)
+                .IsRequired()
+                .HasMaxLength(40);
+
+            entity.Property(card => card.CreatedByUserId)
+                .IsRequired()
+                .HasMaxLength(450);
+
+            entity.HasIndex(card => new { card.CreatedByUserId, card.ArchivedUtc });
+
+            entity.HasIndex(card => new { card.CreatedByUserId, card.DeckOrder });
+
+            entity.HasOne(card => card.Palette)
+                .WithMany(palette => palette.Cards)
+                .HasForeignKey(card => card.PaletteId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
