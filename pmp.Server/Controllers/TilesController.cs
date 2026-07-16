@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using pmp.AppDb;
+using pmp.Server.Model.Tiles;
 
 namespace pmp.Server.Controllers;
 
@@ -151,61 +151,5 @@ public class TilesController(AppDbContext dbContext) : ControllerBase
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-}
-
-public class TileCreateRequest
-{
-    public int X { get; set; }
-
-    public int Y { get; set; }
-
-    [MaxLength(1000)]
-    public string? CurrentImagePath { get; set; }
-}
-
-public class TileSummaryResponse
-{
-    public int Id { get; set; }
-
-    public int X { get; set; }
-
-    public int Y { get; set; }
-
-    public string Status { get; set; } = string.Empty;
-
-    public string? CurrentImagePath { get; set; }
-
-    public bool IsLocked { get; set; }
-
-    public DateTimeOffset? LockExpiresUtc { get; set; }
-
-    public DateTimeOffset UpdatedUtc { get; set; }
-}
-
-public class TileDetailResponse : TileSummaryResponse
-{
-    public int? CurrentRevisionId { get; set; }
-
-    public int? ActiveEditSessionId { get; set; }
-
-    public DateTimeOffset CreatedUtc { get; set; }
-
-    public static TileDetailResponse FromTile(Tile tile)
-    {
-        return new TileDetailResponse
-        {
-            Id = tile.Id,
-            X = tile.X,
-            Y = tile.Y,
-            Status = tile.Status,
-            CurrentImagePath = tile.CurrentImagePath,
-            CurrentRevisionId = tile.CurrentRevisionId,
-            IsLocked = tile.LockExpiresUtc != null && tile.LockExpiresUtc > DateTimeOffset.UtcNow,
-            LockExpiresUtc = tile.LockExpiresUtc,
-            ActiveEditSessionId = tile.ActiveEditSessionId,
-            CreatedUtc = tile.CreatedUtc,
-            UpdatedUtc = tile.UpdatedUtc
-        };
     }
 }

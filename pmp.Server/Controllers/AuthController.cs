@@ -1,10 +1,10 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using pmp.AuthDb;
 using pmp.Server.Auth;
+using pmp.Server.Model.Auth;
 
 namespace pmp.Server.Controllers;
 
@@ -100,61 +100,5 @@ public class AuthController(
         }
 
         return modelState;
-    }
-}
-
-public class RegisterRequest
-{
-    [Required]
-    public string UserName { get; set; } = string.Empty;
-
-    [Required]
-    [MinLength(12)]
-    public string Password { get; set; } = string.Empty;
-
-    [EmailAddress]
-    public string? Email { get; set; }
-}
-
-public class LoginRequest
-{
-    [Required]
-    public string UserName { get; set; } = string.Empty;
-
-    [Required]
-    public string Password { get; set; } = string.Empty;
-}
-
-public class RefreshTokenRequest
-{
-    [Required]
-    public string RefreshToken { get; set; } = string.Empty;
-}
-
-public class AuthResponse
-{
-    public string AccessToken { get; set; } = string.Empty;
-
-    public DateTimeOffset AccessTokenExpiresUtc { get; set; }
-
-    public string RefreshToken { get; set; } = string.Empty;
-
-    public DateTimeOffset RefreshTokenExpiresUtc { get; set; }
-
-    public string UserName { get; set; } = string.Empty;
-
-    public string? Email { get; set; }
-
-    public static AuthResponse FromAuthResult(AuthResult result)
-    {
-        return new AuthResponse
-        {
-            AccessToken = result.AccessToken,
-            AccessTokenExpiresUtc = result.AccessTokenExpiresUtc,
-            RefreshToken = result.RefreshToken,
-            RefreshTokenExpiresUtc = result.RefreshTokenExpiresUtc,
-            UserName = result.UserName,
-            Email = result.Email
-        };
     }
 }

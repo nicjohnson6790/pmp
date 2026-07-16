@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using pmp.AppDb;
+using pmp.Server.Model.Palettes;
 
 namespace pmp.Server.Controllers;
 
@@ -237,74 +237,4 @@ public partial class PalettesController(AppDbContext dbContext) : ControllerBase
 
     [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
     private static partial Regex HexColorRegex();
-}
-
-public class PaletteSaveRequest
-{
-    [Required]
-    public string Name { get; set; } = string.Empty;
-
-    public string? Description { get; set; }
-
-    public List<PaletteColorSaveRequest> Colors { get; set; } = [];
-}
-
-public class PaletteColorSaveRequest
-{
-    [Required]
-    public string Name { get; set; } = string.Empty;
-
-    [Required]
-    public string Hex { get; set; } = string.Empty;
-}
-
-public class PaletteSummaryResponse
-{
-    public int Id { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public string? Description { get; set; }
-
-    public DateTimeOffset UpdatedUtc { get; set; }
-
-    public List<PaletteColorResponse> Colors { get; set; } = [];
-}
-
-public class PaletteDetailResponse : PaletteSummaryResponse
-{
-    public DateTimeOffset CreatedUtc { get; set; }
-
-    public static PaletteDetailResponse FromPalette(Palette palette)
-    {
-        return new PaletteDetailResponse
-        {
-            Id = palette.Id,
-            Name = palette.Name,
-            Description = palette.Description,
-            CreatedUtc = palette.CreatedUtc,
-            UpdatedUtc = palette.UpdatedUtc,
-            Colors = palette.Colors
-                .OrderBy(color => color.SortOrder)
-                .Select(color => new PaletteColorResponse
-                {
-                    Id = color.Id,
-                    Name = color.Name,
-                    Hex = color.Hex,
-                    SortOrder = color.SortOrder
-                })
-                .ToList()
-        };
-    }
-}
-
-public class PaletteColorResponse
-{
-    public int Id { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public string Hex { get; set; } = string.Empty;
-
-    public int SortOrder { get; set; }
 }

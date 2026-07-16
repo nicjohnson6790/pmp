@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using pmp.Server.Model.WeatherForecast;
 
 namespace pmp.Server.Controllers
 {

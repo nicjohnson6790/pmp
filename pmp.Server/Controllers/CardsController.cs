@@ -1,8 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using pmp.AppDb;
+using pmp.Server.Model.Cards;
+using pmp.Server.Model.Palettes;
 
 namespace pmp.Server.Controllers;
 
@@ -291,63 +292,4 @@ public class CardsController(AppDbContext dbContext) : ControllerBase
 
         return ModelState.IsValid ? null : ValidationProblem(ModelState);
     }
-}
-
-public class CardSaveRequest
-{
-    [Required]
-    public string Title { get; set; } = string.Empty;
-
-    [Required]
-    public string Prompt { get; set; } = string.Empty;
-
-    public int PaletteId { get; set; }
-
-    [Range(1, 9)]
-    public int SkipNumber { get; set; } = 1;
-
-    [Range(1, 9)]
-    public int HintNumber { get; set; } = 1;
-
-    [Required]
-    public string ActionType { get; set; } = CardActionTypes.Normal;
-
-    public int DeckOrder { get; set; }
-}
-
-public class CardSummaryResponse
-{
-    public int Id { get; set; }
-
-    public string Title { get; set; } = string.Empty;
-
-    public string Prompt { get; set; } = string.Empty;
-
-    public int PaletteId { get; set; }
-
-    public CardPaletteResponse Palette { get; set; } = new();
-
-    public int SkipNumber { get; set; }
-
-    public int HintNumber { get; set; }
-
-    public string ActionType { get; set; } = string.Empty;
-
-    public int DeckOrder { get; set; }
-
-    public DateTimeOffset UpdatedUtc { get; set; }
-}
-
-public class CardDetailResponse : CardSummaryResponse
-{
-    public DateTimeOffset CreatedUtc { get; set; }
-}
-
-public class CardPaletteResponse
-{
-    public int Id { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public List<PaletteColorResponse> Colors { get; set; } = [];
 }
