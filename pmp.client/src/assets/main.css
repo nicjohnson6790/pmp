@@ -182,6 +182,12 @@ small {
   background: transparent;
 }
 
+.route-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .app-shell {
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr);
@@ -309,7 +315,8 @@ button:disabled {
 
 .palette-workspace,
 .card-workspace,
-.tile-workspace {
+.tile-workspace,
+.tile-editor-workspace {
   display: grid;
   gap: 20px;
 }
@@ -642,6 +649,135 @@ button:disabled {
   background: var(--color-green-50);
 }
 
+.tile-editor-start {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.inline-help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.tile-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.active-card-panel,
+.drawing-editor-shell,
+.layer-manager-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.active-card-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.active-card-panel h2,
+.layer-manager-panel h2 {
+  margin: 0;
+  color: var(--color-green-950);
+  letter-spacing: 0;
+}
+
+.active-card-panel p {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 650;
+  white-space: pre-wrap;
+}
+
+.editor-palette-strip {
+  min-height: 34px;
+}
+
+.drawing-editor-shell {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) minmax(180px, 240px);
+  min-height: 620px;
+  overflow: hidden;
+}
+
+.tool-rail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.tool-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-green-950);
+  background: var(--color-surface);
+  font-weight: 800;
+}
+
+.tool-button.active,
+.tool-button:hover {
+  border-color: var(--color-green-600);
+  background: var(--color-green-100);
+}
+
+.tile-canvas-stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 24px;
+  background:
+    linear-gradient(45deg, rgba(17, 24, 39, 0.04) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(17, 24, 39, 0.04) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(17, 24, 39, 0.04) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(17, 24, 39, 0.04) 75%);
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0;
+  background-size: 20px 20px;
+}
+
+.tile-canvas-placeholder {
+  display: grid;
+  place-items: center;
+  width: min(100%, 720px);
+  aspect-ratio: 1.414 / 1;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  background: white;
+  box-shadow: var(--shadow-panel);
+  font-weight: 750;
+}
+
+.layer-manager-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+}
+
 .panel-empty {
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -674,8 +810,23 @@ button:disabled {
 
   .palette-layout,
   .card-layout,
-  .tile-layout {
+  .tile-layout,
+  .tile-editor-layout {
     grid-template-columns: 1fr;
+  }
+
+  .drawing-editor-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-rail {
+    grid-template-columns: repeat(5, 32px);
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .layer-manager-panel {
+    border-width: 1px 0 0;
   }
 
   .workspace-header,

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { TileCreateRequest, TileDetailResponse, TileSummaryResponse } from '../api'
-import { tilesApi } from '../api'
+import { useRouter } from 'vue-router'
+import { CardSummaryResponse, TileCreateRequest, TileDetailResponse, TileSummaryResponse } from '../api'
+import { cardsApi, tilesApi } from '../api'
 
 type TileForm = {
   x: number
@@ -9,11 +10,14 @@ type TileForm = {
 }
 
 const tiles = ref<TileSummaryResponse[]>([])
+const cards = ref<CardSummaryResponse[]>([])
 const selectedTile = ref<TileDetailResponse>()
 const isLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 const form = reactive<TileForm>({ x: 0, y: 0 })
+const selectedCardId = ref<number>()
+const router = useRouter()
 
 const sortedTiles = computed(() => {
   return [...tiles.value].sort((left, right) => left.y! - right.y! || left.x! - right.x!)
@@ -54,8 +58,37 @@ const tileCountLabel = computed(() => {
 })
 
 onMounted(() => {
-  loadTiles()
+  loadWorkspace()
 })
+
+async function loadWorkspace() {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  const [tilesResult, cardsResult] = await Promise.allSettled([
+    tilesApi.tiles_GetTiles(),
+    cardsApi.cards_GetCards(),
+  ])
+
+  if (tilesResult.status === 'fulfilled') {
+    tiles.value = tilesResult.value
+  } else {
+    tiles.value = []
+    errorMessage.value = 'Tiles could not be loaded.'
+  }
+
+  if (cardsResult.status === 'fulfilled') {
+    cards.value = cardsResult.value
+    selectedCardId.value = selectedCardId.value ?? cards.value[0]?.id
+  } else {
+    cards.value = []
+    errorMessage.value = errorMessage.value
+      ? `${errorMessage.value} Cards could not be loaded.`
+      : 'Cards could not be loaded.'
+  }
+
+  isLoading.value = false
+}
 
 async function loadTiles() {
   isLoading.value = true
@@ -125,6 +158,21 @@ function formatCoordinate(tile?: { x?: number; y?: number }) {
 
 function statusLabel(tile: TileSummaryResponse | TileDetailResponse) {
   return tile.isLocked ? 'Locked' : tile.status === 'open' ? 'Open' : tile.status
+}
+
+async function startEditor() {
+  if (!selectedTile.value?.id || !selectedCardId.value) {
+    errorMessage.value = 'Choose a tile and card before starting the editor.'
+    return
+  }
+
+  await router.push({
+    name: 'tile-editor',
+    params: {
+      tileId: selectedTile.value.id,
+      cardId: selectedCardId.value,
+    },
+  })
 }
 </script>
 
@@ -220,6 +268,19 @@ function statusLabel(tile: TileSummaryResponse | TileDetailResponse) {
               <dd>{{ selectedTile.currentImagePath ?? 'No image yet' }}</dd>
             </div>
           </dl>
+
+          <form v-if="selectedTile" class="tile-editor-start" @submit.prevent="startEditor">
+            <label>
+              <span>Editor card</span>
+              <select v-model.number="selectedCardId" name="editor-card" :disabled="cards.length === 0" required>
+                <option v-for="card in cards" :key="card.id" :value="card.id">
+                  {{ card.title }} - Skip {{ card.skipNumber }} / Hint {{ card.hintNumber }}
+                </option>
+              </select>
+            </label>
+            <button class="primary-button" type="submit" :disabled="cards.length === 0">Start editor</button>
+            <p v-if="cards.length === 0" class="inline-help">Create a card before starting an editor session.</p>
+          </form>
         </section>
 
         <section class="tile-list-panel" aria-label="Tile list">
