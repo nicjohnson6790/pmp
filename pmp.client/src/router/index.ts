@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CardWorkspace from '../components/CardWorkspace.vue'
 import PaletteWorkspace from '../components/PaletteWorkspace.vue'
+import TileWorkspace from '../components/TileWorkspace.vue'
 import HomeView from '../views/HomeView.vue'
 
 export const router = createRouter({
@@ -20,6 +21,11 @@ export const router = createRouter({
       path: '/cards',
       name: 'cards',
       component: CardWorkspace,
+    },
+    {
+      path: '/tiles',
+      name: 'tiles',
+      component: TileWorkspace,
     },
     {
       path: '/:pathMatch(.*)*',

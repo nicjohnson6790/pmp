@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { authState, initializeAuth, isAuthenticated, login, logout, register } from './auth'
 
@@ -11,11 +11,6 @@ const form = reactive({
   userName: '',
   password: '',
   email: '',
-})
-
-const passwordHelp = computed(() => {
-  const remaining = 12 - form.password.length
-  return remaining > 0 ? `${remaining} more characters needed` : 'Password length looks good'
 })
 
 onMounted(() => {
@@ -91,7 +86,6 @@ async function logoutToLogin() {
             minlength="12"
             required
           />
-          <small>{{ passwordHelp }}</small>
         </label>
 
         <label v-if="mode === 'register'">
@@ -134,6 +128,9 @@ async function logoutToLogin() {
         </RouterLink>
         <RouterLink class="nav-link" to="/cards" active-class="active">
           Cards
+        </RouterLink>
+        <RouterLink class="nav-link" to="/tiles" active-class="active">
+          Tiles
         </RouterLink>
       </nav>
     </aside>

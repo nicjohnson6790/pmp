@@ -10,6 +10,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<PaletteColor> PaletteColors => Set<PaletteColor>();
 
+    public DbSet<Tile> Tiles => Set<Tile>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -83,6 +85,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(palette => palette.Cards)
                 .HasForeignKey(card => card.PaletteId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Tile>(entity =>
+        {
+            entity.HasKey(tile => tile.Id);
+
+            entity.Property(tile => tile.Status)
+                .IsRequired()
+                .HasMaxLength(40);
+
+            entity.Property(tile => tile.CurrentImagePath)
+                .HasMaxLength(1000);
+
+            entity.Property(tile => tile.CreatedByUserId)
+                .IsRequired()
+                .HasMaxLength(450);
+
+            entity.Property(tile => tile.LockedByUserId)
+                .HasMaxLength(450);
+
+            entity.HasIndex(tile => new { tile.X, tile.Y })
+                .IsUnique()
+                .HasFilter("[ArchivedUtc] IS NULL");
+
+            entity.HasIndex(tile => new { tile.CreatedByUserId, tile.ArchivedUtc });
+
+            entity.HasIndex(tile => new { tile.Status, tile.LockExpiresUtc });
         });
     }
 }
