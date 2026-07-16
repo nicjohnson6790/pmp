@@ -13,6 +13,8 @@ export type Transform = {
 
 export type ShapeType = 'circle' | 'polyline' | 'polygon' | 'brush'
 
+export type DrawingTool = ShapeType | 'pan'
+
 export type DrawingStyle = {
   fill?: string
   stroke?: string
@@ -60,4 +62,8 @@ export function identityTransform(): Transform {
     scaleX: 1,
     scaleY: 1,
   }
+}
+
+export function cloneDrawingDocument(document: DrawingDocument): DrawingDocument {
+  return structuredClone(document)
 }

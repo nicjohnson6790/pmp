@@ -120,6 +120,8 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Highlight selected item control points.
 - Allow dragging existing control points.
 - Allow adding control points where the selected shape type supports it.
+- Show a distinct base control point for every editable shape.
+- Dragging the base control point moves the whole shape; dragging normal control points moves only that point.
 - Support group-level transform handles for move, rotate, and resize when a group is selected.
 - Pass canvas interaction events to the layer manager instead of directly mutating document state.
 - Ask the layer manager for:
@@ -134,7 +136,8 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Display a nested, reorderable tree of groups and shapes.
 - Allow drag/drop reordering within the tree.
 - Allow dragging items into and out of groups.
-- Select items from the list and notify the canvas.
+- Select items from the list and notify the canvas. Canvas click-to-select should not be used.
+- Automatically put the editor into move/control-point mode when a layer is selected.
 - Update items in response to canvas events.
 - Maintain undo/redo history for document edits:
   - Create/delete item.
@@ -326,7 +329,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
   - Skip number and hint number display.
   - Assigned tile coordinate display.
   - Palette-limited swatches.
-  - Tool rail placeholder for select, group transform, brush, polyline, circle, polygon/region, eyedropper, pan/zoom, undo/redo.
+  - Tool rail placeholder for move/control-point mode, group transform, brush, polyline, circle, polygon/region, eyedropper, pan/zoom, undo/redo.
   - Layer manager with nested groups, drag/drop reordering, and selection.
   - Save draft action.
 - Start with a minimal structured drawing payload, even if only a subset of drawing tools works at first.
@@ -411,7 +414,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Saves are blocked when the live changed-pixel count exceeds the configured limit.
 - The client sends layer-list documents to the server; the server renders the newest tile image and performs the authoritative changed-pixel check.
 - The tile editor can create and render circle, polyline, polygon, and brush shapes.
-- The tile editor can select shapes from the canvas or layer manager and edit their control points.
+- The tile editor can select shapes from the layer manager and edit their control points on the canvas.
 - The layer manager can nest groups and reorder items with drag/drop.
 - Moving items into or out of groups preserves their visual position, size, and rotation.
 - Group transforms are stored at the group level.

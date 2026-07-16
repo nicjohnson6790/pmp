@@ -6,13 +6,25 @@ import { cardsApi, tilesApi } from '../api'
 import DrawingCanvas from './DrawingCanvas.vue'
 import LayerManager from './LayerManager.vue'
 import { sampleTileDocument } from '../editor/sampleDrawingDocument'
+import { useDrawingDocument } from '../editor/useDrawingDocument'
 
 const route = useRoute()
 const tile = ref<TileDetailResponse>()
 const card = ref<CardDetailResponse>()
 const isLoading = ref(false)
 const errorMessage = ref('')
-const selectedNodeId = ref('field')
+const {
+  activeFill,
+  activeTool,
+  beginCircle,
+  document: drawingDocument,
+  finishDraftCircle,
+  selectNode,
+  selectedNodeId,
+  setActiveColor,
+  setActiveTool,
+  updateDraftCircle,
+} = useDrawingDocument(sampleTileDocument)
 
 const tileId = computed(() => Number(route.params.tileId))
 const cardId = computed(() => Number(route.params.cardId))
@@ -44,6 +56,7 @@ async function loadEditorContext() {
 
   if (cardResult.status === 'fulfilled') {
     card.value = cardResult.value
+    syncActiveColorFromCard(cardResult.value)
   } else {
     errorMessage.value = errorMessage.value
       ? `${errorMessage.value} The selected card could not be loaded.`
@@ -55,6 +68,13 @@ async function loadEditorContext() {
 
 function formatCoordinate(nextTile?: { x?: number; y?: number }) {
   return nextTile ? `(${nextTile.x ?? 0}, ${nextTile.y ?? 0})` : ''
+}
+
+function syncActiveColorFromCard(nextCard: CardDetailResponse) {
+  const firstColor = nextCard.palette?.colors?.[0]?.hex
+  if (firstColor) {
+    setActiveColor(firstColor)
+  }
 }
 </script>
 
@@ -83,31 +103,50 @@ function formatCoordinate(nextTile?: { x?: number; y?: number }) {
         <h2>{{ card.title }}</h2>
         <p>{{ card.prompt }}</p>
         <div class="palette-strip editor-palette-strip" aria-label="Active palette">
-          <span
+          <button
             v-for="color in paletteColors"
             :key="`${color.id}-${color.hex}`"
+            class="palette-color-button"
+            :class="{ selected: color.hex === activeFill }"
+            type="button"
             :style="{ background: color.hex }"
             :title="`${color.name}: ${color.hex}`"
-          ></span>
+            @click="color.hex && setActiveColor(color.hex)"
+          ></button>
         </div>
       </aside>
 
       <section class="drawing-editor-shell" aria-label="Drawing editor">
         <div class="tool-rail" aria-label="Editor tools">
-          <button class="tool-button active" type="button" title="Brush">B</button>
-          <button class="tool-button" type="button" title="Polyline">L</button>
-          <button class="tool-button" type="button" title="Circle">C</button>
-          <button class="tool-button" type="button" title="Polygon">P</button>
+          <button class="tool-button" type="button" title="Brush" disabled>B</button>
+          <button class="tool-button" type="button" title="Polyline" disabled>L</button>
+          <button
+            class="tool-button"
+            :class="{ active: activeTool === 'circle' }"
+            type="button"
+            title="Circle"
+            @click="setActiveTool('circle')"
+          >
+            C
+          </button>
+          <button class="tool-button" type="button" title="Polygon" disabled>P</button>
         </div>
 
         <div class="tile-canvas-stage">
-          <DrawingCanvas :document="sampleTileDocument" :selected-node-id="selectedNodeId" />
+          <DrawingCanvas
+            :active-tool="activeTool"
+            :document="drawingDocument"
+            :selected-node-id="selectedNodeId"
+            @begin-circle="beginCircle"
+            @update-circle="updateDraftCircle"
+            @finish-circle="finishDraftCircle"
+          />
         </div>
 
         <LayerManager
-          :document="sampleTileDocument"
+          :document="drawingDocument"
           :selected-node-id="selectedNodeId"
-          @select="selectedNodeId = $event"
+          @select="selectNode"
         />
       </section>
     </div>

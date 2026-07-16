@@ -9,9 +9,10 @@ This is a handoff note for continuing the tile/editor work.
   - `5e61bed Add tile editor entry shell`
   - `d5149bb Document tile editor handoff`
   - `447d5c4 Move API DTOs into server model folders`
-- Current uncommitted work adds the first shared drawing document foundation on the client.
+  - `6dda2a3 Add static drawing editor foundation`
+- The circle creation tool slice is checked in after the static drawing foundation.
 - `AddTiles` has been applied to the local `pmp.AppDb` database.
-- `npm run build` passed after the drawing foundation work.
+- `npm run build` passed after the circle creation work.
 - `dotnet build pmp.slnx` passed after the tile API work. NSwag generation emits the existing `wwwroot` warning but succeeds.
 
 ## Implemented
@@ -38,9 +39,14 @@ This is a handoff note for continuing the tile/editor work.
   - `drawingTree.ts` with flatten/find helpers.
   - `drawingRender.ts` with a canvas renderer for circle, polyline, polygon, and brush shapes.
   - `sampleDrawingDocument.ts` with a hardcoded tile document.
+  - `useDrawingDocument.ts` with the first editor store/composable for document state, selection, active tool, active color, and circle creation.
 - `DrawingCanvas.vue` renders the document to a `<canvas>`.
 - `LayerManager.vue` displays the flattened layer tree and emits selection changes.
 - Selecting a shape in the layer manager highlights that shape and its control points on the canvas.
+- The circle tool is the first working creation tool:
+  - Select a card palette swatch to choose the active color.
+  - Drag on the canvas to add a circle.
+  - The new circle is inserted at the top-level document order and selected immediately.
 
 ## Important Decisions
 
@@ -48,17 +54,21 @@ This is a handoff note for continuing the tile/editor work.
 - Selection should happen through the layer manager, not a select tool button.
 - The editor route is client-side context only; it is not a persisted backend edit session.
 - No new npm packages were added for the tile/editor shell.
-- The first drawing foundation is still client-only and uses a static sample document.
-- Canvas selection is currently driven by the layer manager only; canvas hit-testing is not implemented yet.
+- The drawing editor is still client-only and starts from a static sample document.
+- Canvas selection should stay layer-manager-only. Do not add click-to-select hit-testing on the canvas.
+- Selecting a layer should automatically put the editor into a move/control-point editing mode.
+- Every editable shape should have a distinct base control point. Dragging the base point repositions the whole shape; dragging normal control points only moves that one point.
+- Only circle creation mutates the document. Brush, polyline, and polygon buttons are disabled placeholders.
+- Undo/redo should be designed as a shared editor-history system for all edit actions, not a one-off circle-only stack.
 
 ## Recommended Next Slice
 
-Build the first document mutation path:
+Build the next editing path:
 
-1. Add a small editor store/composable to own the document, selection, active tool, and style state.
-2. Move the static sample document into that store as initial state.
-3. Let the layer manager select both groups and shapes, with group selection highlighting its child bounds or render order clearly.
-4. Add one creation tool end to end, likely circle or polyline first.
-5. Keep created shape colors constrained to the active card palette.
+1. Add a move/control-point editing mode that is automatically active when a layer is selected.
+2. Render selected circle handles with a distinct base control point plus normal control points.
+3. Drag the base control point to reposition the whole circle.
+4. Drag the radius control point to resize the circle.
+5. Add shared undo/redo snapshots for create circle, move whole shape, and control-point drag.
 
 Keep this client-only at first. Persisting drafts, edit sessions, locks, and changed-pixel limits should wait until the document shape, renderer, and first mutation path feel stable.
