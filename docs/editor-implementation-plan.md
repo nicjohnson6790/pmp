@@ -15,9 +15,13 @@ This plan turns the feature TODO into buildable slices. The intended order is co
 
 Palette CRUD is the first working product slice. `pmp.AppDb` exists for app-domain data, palette tables have an initial migration, the server exposes authenticated palette endpoints, NSwag generates the palette client, and the Vue app has a usable palette workspace with create/edit/archive, color validation, swatches, and reorder controls.
 
-Card CRUD/editor is now the second working product slice. The app domain has a `Card` entity and `AddCards` migration, the server exposes authenticated card list/detail/create/update/archive endpoints, NSwag generates the card client, and the Vue app has a routed card workspace with list, edit/archive, palette selection, skip/hint numbers, action type, deck order, preview, and validation. The local AppDb needs the `AddCards` migration applied before using card endpoints.
+Card CRUD/editor is now the second working product slice. The app domain has a `Card` entity and `AddCards` migration, the server exposes authenticated card list/detail/create/update/archive endpoints, NSwag generates the card client, and the Vue app has a routed card workspace with list, edit/archive, palette selection, skip/hint numbers, action type, deck order, preview, and validation.
 
-Next implementation focus: basic tile model/browser and the first shared drawing document/editor groundwork.
+Tile scaffolding is the third working slice. The app domain has a `Tile` entity and `AddTiles` migration, the server exposes authenticated tile list/detail/create/archive endpoints, NSwag generates the tile client, and the Vue app has a routed tile workspace with a temporary coordinate CRUD/browser view. The local AppDb has had `AddTiles` applied. The CRUD view is mainly a test harness and is not expected to be the final map browser UI.
+
+Tile editor entry is started on the client. From the tile detail panel, a user can choose an existing card and open `/tiles/:tileId/editor/:cardId`. `TileEditorWorkspace.vue` loads the chosen tile and card, displays the card prompt, skip/hint numbers, palette swatches, a placeholder landscape tile canvas, creation tool placeholders, and an empty layer manager. This is not a persisted edit session yet.
+
+Next implementation focus: shared drawing document schema, static canvas rendering, and layer-manager-driven selection.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -211,7 +215,8 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
   - Handles selection.
   - Supports drag/drop reorder and nesting.
 - `ToolRail.vue`
-  - Select, move/transform, brush, polyline, circle, polygon, eyedropper, pan/zoom.
+  - Creation/edit tools such as brush, polyline, circle, polygon, eyedropper, pan/zoom, and transform modes.
+  - Selection should be driven from the layer manager rather than a select tool in the tool rail.
 - `PaletteSwatches.vue`
   - Displays available copied colors from the active card palette.
 - `DrawingEditorShell.vue`
@@ -221,9 +226,9 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 
 1. Static rendering of a hardcoded document.
 2. Selection from layer manager.
-3. Selection from canvas hit testing.
+3. Canvas highlighting for the layer-manager selection.
 4. Create polygon/polyline/brush/circle.
-5. Edit control points.
+5. Edit control points for the selected layer item.
 6. Undo/redo for document mutations.
 7. Group/ungroup.
 8. Drag/drop reorder.
@@ -261,7 +266,9 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 
 - `GET /api/tiles`
 - `GET /api/tiles/{id}`
-- `GET /api/tiles/grid`
+- `POST /api/tiles`
+- `POST /api/tiles/{id}/archive`
+- Later: `GET /api/tiles/grid` if a dedicated grid projection becomes useful.
 
 ### Frontend
 
@@ -273,6 +280,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - Tile detail:
   - Current image.
   - Revision metadata summary.
+  - Temporary card picker that opens the client-side editor shell.
 
 ## Phase 6: Card Draw and Edit Sessions
 
