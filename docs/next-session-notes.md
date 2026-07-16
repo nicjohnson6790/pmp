@@ -53,6 +53,14 @@ This is a handoff note for continuing the tile/editor work.
   - Dragging the base control point moves the whole circle.
   - Dragging the radius control point resizes the circle.
 - Undo/redo uses shared document snapshots for circle creation, circle moves, and circle radius edits.
+- Control-point editing now applies to all first-pass point-based shapes:
+  - Dragging the base control point moves the whole shape.
+  - Dragging normal control points moves individual points.
+- Delete selected layer is available from the tool rail and is undoable.
+- Keyboard shortcuts:
+  - `Delete` / `Backspace`: delete selected layer.
+  - `Ctrl+Z` / `Cmd+Z`: undo.
+  - `Ctrl+Y` / `Cmd+Y` and `Ctrl+Shift+Z` / `Cmd+Shift+Z`: redo.
 
 ## Important Decisions
 
@@ -71,9 +79,9 @@ This is a handoff note for continuing the tile/editor work.
 
 Build the next editing path:
 
-1. Extend control-point editing to polyline, polygon, and brush shapes.
-2. Add delete selected shape and make it undoable.
-3. Start extracting the editor toolbar into a small component once tool controls grow beyond the current prototype rail.
-4. Add tests for document mutations and history once the store stabilizes around multiple shape types.
+1. Start extracting the editor toolbar into a small component once tool controls grow beyond the current prototype rail.
+2. Add tests for document mutations and history now that create, move, point-edit, delete, undo, and redo exist.
+3. Add creation flows for polyline, polygon, and brush shapes.
+4. Add reorder support in the layer manager, then make reorder undoable.
 
 Keep this client-only at first. Persisting drafts, edit sessions, locks, and changed-pixel limits should wait until the document shape, renderer, and first mutation path feel stable.

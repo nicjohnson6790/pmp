@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { CardDetailResponse, TileDetailResponse } from '../api'
 import { cardsApi, tilesApi } from '../api'
@@ -18,8 +18,10 @@ const {
   activeTool,
   beginCircle,
   beginControlPointDrag,
+  canDeleteSelection,
   canRedo,
   canUndo,
+  deleteSelectedNode,
   document: drawingDocument,
   finishControlPointDrag,
   finishDraftCircle,
@@ -39,6 +41,11 @@ const paletteColors = computed(() => card.value?.palette?.colors ?? [])
 
 onMounted(() => {
   loadEditorContext()
+  window.addEventListener('keydown', handleEditorShortcut)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEditorShortcut)
 })
 
 async function loadEditorContext() {
@@ -82,6 +89,46 @@ function syncActiveColorFromCard(nextCard: CardDetailResponse) {
   if (firstColor) {
     setActiveColor(firstColor)
   }
+}
+
+function handleEditorShortcut(event: KeyboardEvent) {
+  if (isTypingTarget(event.target)) {
+    return
+  }
+
+  const isModifierPressed = event.ctrlKey || event.metaKey
+  const key = event.key.toLowerCase()
+
+  if (isModifierPressed && key === 'z' && event.shiftKey) {
+    event.preventDefault()
+    redo()
+    return
+  }
+
+  if (isModifierPressed && key === 'z') {
+    event.preventDefault()
+    undo()
+    return
+  }
+
+  if (isModifierPressed && key === 'y') {
+    event.preventDefault()
+    redo()
+    return
+  }
+
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    deleteSelectedNode()
+  }
+}
+
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable
 }
 </script>
 
@@ -152,6 +199,15 @@ function syncActiveColorFromCard(nextCard: CardDetailResponse) {
           </button>
           <button class="tool-button" type="button" title="Redo" :disabled="!canRedo" @click="redo">
             R
+          </button>
+          <button
+            class="tool-button"
+            type="button"
+            title="Delete selected layer"
+            :disabled="!canDeleteSelection"
+            @click="deleteSelectedNode"
+          >
+            X
           </button>
         </div>
 

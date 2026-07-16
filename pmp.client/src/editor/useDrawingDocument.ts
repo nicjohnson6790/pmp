@@ -1,7 +1,7 @@
 import { computed, ref, toRaw } from 'vue'
 import type { DrawingDocument, DrawingTool, Point, ShapeControlPoint, ShapeNode } from './drawingTypes'
 import { cloneDrawingDocument, identityTransform } from './drawingTypes'
-import { findDrawingNode } from './drawingTree'
+import { findDrawingNode, removeDrawingNode } from './drawingTree'
 
 const minimumCircleRadius = 8
 const historyLimit = 50
@@ -23,6 +23,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
 
   const canUndo = computed(() => undoStack.value.length > 0)
   const canRedo = computed(() => redoStack.value.length > 0)
+  const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
 
   const selectedToolLabel = computed(() => {
     return activeTool.value === 'circle' ? 'Circle' : activeTool.value === 'edit' ? 'Edit' : activeTool.value
@@ -95,7 +96,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     }
 
     const shape = findSelectedShape()
-    if (!shape || shape.shapeType !== 'circle') {
+    if (!shape) {
       return
     }
 
@@ -113,7 +114,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     }
 
     const shape = findSelectedShape()
-    if (!shape || shape.shapeType !== 'circle') {
+    if (!shape) {
       return
     }
 
@@ -131,7 +132,8 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
       return
     }
 
-    shape.points[drag.controlPoint.pointIndex] = nextPoint
+    shape.points[drag.controlPoint.pointIndex] =
+      shape.shapeType === 'circle' ? constrainCircleRadiusPoint(shape, nextPoint) : nextPoint
   }
 
   function finishControlPointDrag() {
@@ -160,6 +162,23 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     clearTransientEditState()
   }
 
+  function deleteSelectedNode() {
+    if (!selectedNodeId.value) {
+      return
+    }
+
+    pushHistorySnapshot()
+    const wasRemoved = removeDrawingNode(document.value, selectedNodeId.value)
+    if (!wasRemoved) {
+      undoStack.value.pop()
+      return
+    }
+
+    selectedNodeId.value = undefined
+    activeTool.value = 'circle'
+    clearTransientEditState()
+  }
+
   function getDraftCircle() {
     const id = draftShapeId.value
     if (!id) {
@@ -169,6 +188,24 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     return document.value.nodes.find(
       (node): node is ShapeNode => node.id === id && node.type === 'shape' && node.shapeType === 'circle',
     )
+  }
+
+  function constrainCircleRadiusPoint(shape: ShapeNode, nextPoint: Point) {
+    const center = shape.points[0]
+    if (!center) {
+      return nextPoint
+    }
+
+    const radius = Math.hypot(nextPoint.x - center.x, nextPoint.y - center.y)
+    if (radius >= minimumCircleRadius) {
+      return nextPoint
+    }
+
+    const angle = radius === 0 ? 0 : Math.atan2(nextPoint.y - center.y, nextPoint.x - center.x)
+    return {
+      x: center.x + Math.cos(angle) * minimumCircleRadius,
+      y: center.y + Math.sin(angle) * minimumCircleRadius,
+    }
   }
 
   function findSelectedShape() {
@@ -198,6 +235,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     activeFill,
     activeStroke,
     activeTool,
+    canDeleteSelection,
     canRedo,
     canUndo,
     document,
@@ -205,6 +243,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     selectedToolLabel,
     beginCircle,
     beginControlPointDrag,
+    deleteSelectedNode,
     finishDraftCircle,
     finishControlPointDrag,
     redo,

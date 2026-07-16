@@ -12,6 +12,14 @@ export function findDrawingNode(document: DrawingDocument, nodeId?: string): Dra
   return findNode(document.nodes, nodeId)
 }
 
+export function removeDrawingNode(document: DrawingDocument, nodeId?: string): boolean {
+  if (!nodeId) {
+    return false
+  }
+
+  return removeNode(document.nodes, nodeId)
+}
+
 function flattenNodes(nodes: DrawingNode[], depth: number): FlattenedDrawingNode[] {
   return nodes.flatMap((node) => {
     const current = { node, depth }
@@ -38,4 +46,20 @@ function findNode(nodes: DrawingNode[], nodeId: string): DrawingNode | undefined
   }
 
   return undefined
+}
+
+function removeNode(nodes: DrawingNode[], nodeId: string): boolean {
+  const index = nodes.findIndex((node) => node.id === nodeId)
+  if (index >= 0) {
+    nodes.splice(index, 1)
+    return true
+  }
+
+  for (const node of nodes) {
+    if (node.type === 'group' && removeNode(node.children, nodeId)) {
+      return true
+    }
+  }
+
+  return false
 }
