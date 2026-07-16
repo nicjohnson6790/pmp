@@ -21,7 +21,9 @@ Tile scaffolding is the third working slice. The app domain has a `Tile` entity 
 
 Tile editor entry is started on the client. From the tile detail panel, a user can choose an existing card and open `/tiles/:tileId/editor/:cardId`. `TileEditorWorkspace.vue` loads the chosen tile and card, displays the card prompt, skip/hint numbers, palette swatches, a placeholder landscape tile canvas, creation tool placeholders, and an empty layer manager. This is not a persisted edit session yet.
 
-Next implementation focus: shared drawing document schema, static canvas rendering, and layer-manager-driven selection.
+Shared drawing foundation is now started on the client. `src/editor` defines the first drawing document types, sample document, tree helpers, and canvas renderer. `DrawingCanvas.vue` renders the static sample document, and `LayerManager.vue` owns click selection with selected shapes highlighted on the canvas.
+
+Next implementation focus: a small editor store/composable plus the first document mutation path, likely creating a circle or polyline using colors constrained by the active card palette.
 
 ## Phase 1: Shared Domain Conventions
 

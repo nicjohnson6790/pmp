@@ -3,12 +3,16 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { CardDetailResponse, TileDetailResponse } from '../api'
 import { cardsApi, tilesApi } from '../api'
+import DrawingCanvas from './DrawingCanvas.vue'
+import LayerManager from './LayerManager.vue'
+import { sampleTileDocument } from '../editor/sampleDrawingDocument'
 
 const route = useRoute()
 const tile = ref<TileDetailResponse>()
 const card = ref<CardDetailResponse>()
 const isLoading = ref(false)
 const errorMessage = ref('')
+const selectedNodeId = ref('field')
 
 const tileId = computed(() => Number(route.params.tileId))
 const cardId = computed(() => Number(route.params.cardId))
@@ -97,15 +101,14 @@ function formatCoordinate(nextTile?: { x?: number; y?: number }) {
         </div>
 
         <div class="tile-canvas-stage">
-          <div class="tile-canvas-placeholder">
-            <span>{{ formatCoordinate(tile) }}</span>
-          </div>
+          <DrawingCanvas :document="sampleTileDocument" :selected-node-id="selectedNodeId" />
         </div>
 
-        <aside class="layer-manager-panel" aria-label="Layers">
-          <h2>Layers</h2>
-          <div class="empty-state">No drawing layers yet.</div>
-        </aside>
+        <LayerManager
+          :document="sampleTileDocument"
+          :selected-node-id="selectedNodeId"
+          @select="selectedNodeId = $event"
+        />
       </section>
     </div>
   </section>

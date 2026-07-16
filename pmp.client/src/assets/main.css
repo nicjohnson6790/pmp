@@ -756,17 +756,15 @@ button:disabled {
   background-size: 20px 20px;
 }
 
-.tile-canvas-placeholder {
-  display: grid;
-  place-items: center;
+.drawing-canvas {
+  display: block;
   width: min(100%, 720px);
+  height: auto;
   aspect-ratio: 1.414 / 1;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  color: var(--color-text-muted);
   background: white;
   box-shadow: var(--shadow-panel);
-  font-weight: 750;
 }
 
 .layer-manager-panel {
@@ -776,6 +774,49 @@ button:disabled {
   padding: 16px;
   border-width: 0 0 0 1px;
   border-radius: 0;
+}
+
+.layer-list {
+  display: grid;
+  gap: 6px;
+}
+
+.layer-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--color-text);
+  background: transparent;
+  text-align: left;
+}
+
+.layer-list-item:hover,
+.layer-list-item.selected {
+  border-color: var(--color-green-500);
+  background: var(--color-green-50);
+}
+
+.layer-list-item.group {
+  font-weight: 800;
+}
+
+.layer-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-type {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-transform: uppercase;
 }
 
 .panel-empty {
