@@ -17,12 +17,19 @@ const {
   activeFill,
   activeTool,
   beginCircle,
+  beginControlPointDrag,
+  canRedo,
+  canUndo,
   document: drawingDocument,
+  finishControlPointDrag,
   finishDraftCircle,
+  redo,
   selectNode,
   selectedNodeId,
   setActiveColor,
   setActiveTool,
+  undo,
+  updateControlPointDrag,
   updateDraftCircle,
 } = useDrawingDocument(sampleTileDocument)
 
@@ -118,6 +125,16 @@ function syncActiveColorFromCard(nextCard: CardDetailResponse) {
 
       <section class="drawing-editor-shell" aria-label="Drawing editor">
         <div class="tool-rail" aria-label="Editor tools">
+          <button
+            class="tool-button"
+            :class="{ active: activeTool === 'edit' }"
+            type="button"
+            title="Edit selected control points"
+            :disabled="!selectedNodeId"
+            @click="setActiveTool('edit')"
+          >
+            E
+          </button>
           <button class="tool-button" type="button" title="Brush" disabled>B</button>
           <button class="tool-button" type="button" title="Polyline" disabled>L</button>
           <button
@@ -130,6 +147,12 @@ function syncActiveColorFromCard(nextCard: CardDetailResponse) {
             C
           </button>
           <button class="tool-button" type="button" title="Polygon" disabled>P</button>
+          <button class="tool-button tool-divider" type="button" title="Undo" :disabled="!canUndo" @click="undo">
+            U
+          </button>
+          <button class="tool-button" type="button" title="Redo" :disabled="!canRedo" @click="redo">
+            R
+          </button>
         </div>
 
         <div class="tile-canvas-stage">
@@ -138,7 +161,10 @@ function syncActiveColorFromCard(nextCard: CardDetailResponse) {
             :document="drawingDocument"
             :selected-node-id="selectedNodeId"
             @begin-circle="beginCircle"
+            @begin-control-point-drag="beginControlPointDrag"
+            @finish-control-point-drag="finishControlPointDrag"
             @update-circle="updateDraftCircle"
+            @update-control-point-drag="updateControlPointDrag"
             @finish-circle="finishDraftCircle"
           />
         </div>

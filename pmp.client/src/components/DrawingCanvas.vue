@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import type { DrawingDocument, DrawingTool, Point } from '../editor/drawingTypes'
-import { renderDrawingDocument } from '../editor/drawingRender'
+import type { DrawingDocument, DrawingTool, Point, ShapeControlPoint } from '../editor/drawingTypes'
+import { getDocumentControlPoints, renderDrawingDocument } from '../editor/drawingRender'
 
 const props = defineProps<{
   activeTool: DrawingTool
@@ -13,10 +13,14 @@ const emit = defineEmits<{
   beginCircle: [center: Point]
   updateCircle: [radiusPoint: Point]
   finishCircle: []
+  beginControlPointDrag: [controlPoint: ShapeControlPoint, startPoint: Point]
+  updateControlPointDrag: [point: Point]
+  finishControlPointDrag: []
 }>()
 
 const canvas = ref<HTMLCanvasElement>()
 const isDrawing = ref(false)
+const isDraggingControlPoint = ref(false)
 
 onMounted(() => {
   renderCanvas()
@@ -41,16 +45,35 @@ function renderCanvas() {
 }
 
 function handlePointerDown(event: PointerEvent) {
+  const documentPoint = getDocumentPoint(event)
+
+  if (props.activeTool === 'edit') {
+    const controlPoint = findControlPointAt(documentPoint)
+    if (!controlPoint) {
+      return
+    }
+
+    isDraggingControlPoint.value = true
+    canvas.value?.setPointerCapture(event.pointerId)
+    emit('beginControlPointDrag', controlPoint, documentPoint)
+    return
+  }
+
   if (props.activeTool !== 'circle') {
     return
   }
 
   isDrawing.value = true
   canvas.value?.setPointerCapture(event.pointerId)
-  emit('beginCircle', getDocumentPoint(event))
+  emit('beginCircle', documentPoint)
 }
 
 function handlePointerMove(event: PointerEvent) {
+  if (isDraggingControlPoint.value) {
+    emit('updateControlPointDrag', getDocumentPoint(event))
+    return
+  }
+
   if (!isDrawing.value || props.activeTool !== 'circle') {
     return
   }
@@ -59,6 +82,14 @@ function handlePointerMove(event: PointerEvent) {
 }
 
 function handlePointerUp(event: PointerEvent) {
+  if (isDraggingControlPoint.value) {
+    isDraggingControlPoint.value = false
+    canvas.value?.releasePointerCapture(event.pointerId)
+    emit('updateControlPointDrag', getDocumentPoint(event))
+    emit('finishControlPointDrag')
+    return
+  }
+
   if (!isDrawing.value) {
     return
   }
@@ -67,6 +98,13 @@ function handlePointerUp(event: PointerEvent) {
   canvas.value?.releasePointerCapture(event.pointerId)
   emit('updateCircle', getDocumentPoint(event))
   emit('finishCircle')
+}
+
+function findControlPointAt(documentPoint: Point): ShapeControlPoint | undefined {
+  const hitRadius = 20
+  return getDocumentControlPoints(props.document, props.selectedNodeId).find((controlPoint) => {
+    return Math.hypot(controlPoint.point.x - documentPoint.x, controlPoint.point.y - documentPoint.y) <= hitRadius
+  })
 }
 
 function getDocumentPoint(event: PointerEvent): Point {
@@ -87,6 +125,7 @@ function getDocumentPoint(event: PointerEvent): Point {
   <canvas
     ref="canvas"
     class="drawing-canvas"
+    :class="{ editing: activeTool === 'edit' }"
     :width="document.width"
     :height="document.height"
     aria-label="Tile drawing preview"

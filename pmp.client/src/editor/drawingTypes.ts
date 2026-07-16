@@ -13,7 +13,16 @@ export type Transform = {
 
 export type ShapeType = 'circle' | 'polyline' | 'polygon' | 'brush'
 
-export type DrawingTool = ShapeType | 'pan'
+export type DrawingTool = ShapeType | 'edit' | 'pan'
+
+export type ControlPointKind = 'base' | 'point'
+
+export type ShapeControlPoint = {
+  nodeId: string
+  pointIndex: number
+  kind: ControlPointKind
+  point: Point
+}
 
 export type DrawingStyle = {
   fill?: string

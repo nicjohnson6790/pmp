@@ -1,6 +1,8 @@
-import type { DrawingDocument, DrawingNode, ShapeNode, Transform } from './drawingTypes'
+import type { DrawingDocument, DrawingNode, ShapeControlPoint, ShapeNode, Transform } from './drawingTypes'
+import { findDrawingNode } from './drawingTree'
 
 const selectionColor = '#16845F'
+const baseHandleColor = '#0A3A2C'
 
 export function renderDrawingDocument(
   context: CanvasRenderingContext2D,
@@ -103,15 +105,33 @@ function drawShapeSelection(context: CanvasRenderingContext2D, shape: ShapeNode)
   context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height)
   context.restore()
 
-  for (const point of shape.points) {
+  for (const controlPoint of getShapeControlPoints(shape)) {
     context.beginPath()
-    context.fillStyle = '#FFFFFF'
+    context.fillStyle = controlPoint.kind === 'base' ? baseHandleColor : '#FFFFFF'
     context.strokeStyle = selectionColor
     context.lineWidth = 5
-    context.arc(point.x, point.y, 12, 0, Math.PI * 2)
+    context.arc(controlPoint.point.x, controlPoint.point.y, controlPoint.kind === 'base' ? 14 : 12, 0, Math.PI * 2)
     context.fill()
     context.stroke()
   }
+}
+
+export function getDocumentControlPoints(document: DrawingDocument, selectedNodeId?: string): ShapeControlPoint[] {
+  const node = findDrawingNode(document, selectedNodeId)
+  if (!node || node.type !== 'shape') {
+    return []
+  }
+
+  return getShapeControlPoints(node)
+}
+
+function getShapeControlPoints(shape: ShapeNode): ShapeControlPoint[] {
+  return shape.points.map((point, index) => ({
+    nodeId: shape.id,
+    pointIndex: index,
+    kind: index === 0 ? 'base' : 'point',
+    point,
+  }))
 }
 
 function getShapeBounds(shape: ShapeNode) {

@@ -1,8 +1,10 @@
-import { computed, ref } from 'vue'
-import type { DrawingDocument, DrawingTool, Point, ShapeNode } from './drawingTypes'
+import { computed, ref, toRaw } from 'vue'
+import type { DrawingDocument, DrawingTool, Point, ShapeControlPoint, ShapeNode } from './drawingTypes'
 import { cloneDrawingDocument, identityTransform } from './drawingTypes'
+import { findDrawingNode } from './drawingTree'
 
 const minimumCircleRadius = 8
+const historyLimit = 50
 
 export function useDrawingDocument(initialDocument: DrawingDocument) {
   const document = ref(cloneDrawingDocument(initialDocument))
@@ -12,13 +14,23 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const activeStroke = ref('#12684D')
   const draftShapeId = ref<string>()
   const createdShapeCount = ref(0)
+  const controlPointDrag = ref<{
+    controlPoint: ShapeControlPoint
+    lastPoint: Point
+  }>()
+  const undoStack = ref<DrawingDocument[]>([])
+  const redoStack = ref<DrawingDocument[]>([])
+
+  const canUndo = computed(() => undoStack.value.length > 0)
+  const canRedo = computed(() => redoStack.value.length > 0)
 
   const selectedToolLabel = computed(() => {
-    return activeTool.value === 'circle' ? 'Circle' : activeTool.value
+    return activeTool.value === 'circle' ? 'Circle' : activeTool.value === 'edit' ? 'Edit' : activeTool.value
   })
 
   function selectNode(nodeId: string) {
     selectedNodeId.value = nodeId
+    activeTool.value = 'edit'
   }
 
   function setActiveTool(tool: DrawingTool) {
@@ -31,6 +43,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   }
 
   function beginCircle(center: Point) {
+    pushHistorySnapshot()
     createdShapeCount.value += 1
     const shape: ShapeNode = {
       id: `circle-${Date.now()}-${createdShapeCount.value}`,
@@ -76,6 +89,77 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     draftShapeId.value = undefined
   }
 
+  function beginControlPointDrag(controlPoint: ShapeControlPoint, startPoint: Point) {
+    if (controlPoint.nodeId !== selectedNodeId.value) {
+      return
+    }
+
+    const shape = findSelectedShape()
+    if (!shape || shape.shapeType !== 'circle') {
+      return
+    }
+
+    pushHistorySnapshot()
+    controlPointDrag.value = {
+      controlPoint,
+      lastPoint: startPoint,
+    }
+  }
+
+  function updateControlPointDrag(nextPoint: Point) {
+    const drag = controlPointDrag.value
+    if (!drag) {
+      return
+    }
+
+    const shape = findSelectedShape()
+    if (!shape || shape.shapeType !== 'circle') {
+      return
+    }
+
+    if (drag.controlPoint.kind === 'base') {
+      const delta = {
+        x: nextPoint.x - drag.lastPoint.x,
+        y: nextPoint.y - drag.lastPoint.y,
+      }
+
+      shape.points = shape.points.map((point) => ({
+        x: point.x + delta.x,
+        y: point.y + delta.y,
+      }))
+      drag.lastPoint = nextPoint
+      return
+    }
+
+    shape.points[drag.controlPoint.pointIndex] = nextPoint
+  }
+
+  function finishControlPointDrag() {
+    controlPointDrag.value = undefined
+  }
+
+  function undo() {
+    const previous = undoStack.value.pop()
+    if (!previous) {
+      return
+    }
+
+    redoStack.value.push(cloneCurrentDocument())
+    document.value = previous
+    clearTransientEditState()
+  }
+
+  function redo() {
+    const next = redoStack.value.pop()
+    if (!next) {
+      return
+    }
+
+    undoStack.value.push(cloneCurrentDocument())
+    document.value = next
+    clearTransientEditState()
+  }
+
   function getDraftCircle() {
     const id = draftShapeId.value
     if (!id) {
@@ -87,18 +171,48 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     )
   }
 
+  function findSelectedShape() {
+    const node = findDrawingNode(document.value, selectedNodeId.value)
+    return node?.type === 'shape' ? node : undefined
+  }
+
+  function pushHistorySnapshot() {
+    undoStack.value.push(cloneCurrentDocument())
+    if (undoStack.value.length > historyLimit) {
+      undoStack.value.shift()
+    }
+
+    redoStack.value = []
+  }
+
+  function cloneCurrentDocument() {
+    return cloneDrawingDocument(toRaw(document.value))
+  }
+
+  function clearTransientEditState() {
+    draftShapeId.value = undefined
+    controlPointDrag.value = undefined
+  }
+
   return {
     activeFill,
     activeStroke,
     activeTool,
+    canRedo,
+    canUndo,
     document,
     selectedNodeId,
     selectedToolLabel,
     beginCircle,
+    beginControlPointDrag,
     finishDraftCircle,
+    finishControlPointDrag,
+    redo,
     selectNode,
     setActiveColor,
     setActiveTool,
+    undo,
+    updateControlPointDrag,
     updateDraftCircle,
   }
 }

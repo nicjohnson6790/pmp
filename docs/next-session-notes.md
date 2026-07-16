@@ -47,6 +47,12 @@ This is a handoff note for continuing the tile/editor work.
   - Select a card palette swatch to choose the active color.
   - Drag on the canvas to add a circle.
   - The new circle is inserted at the top-level document order and selected immediately.
+- Selecting a layer automatically activates edit mode.
+- Selected shapes render a filled base control point plus normal outline control points.
+- For selected circles:
+  - Dragging the base control point moves the whole circle.
+  - Dragging the radius control point resizes the circle.
+- Undo/redo uses shared document snapshots for circle creation, circle moves, and circle radius edits.
 
 ## Important Decisions
 
@@ -65,10 +71,9 @@ This is a handoff note for continuing the tile/editor work.
 
 Build the next editing path:
 
-1. Add a move/control-point editing mode that is automatically active when a layer is selected.
-2. Render selected circle handles with a distinct base control point plus normal control points.
-3. Drag the base control point to reposition the whole circle.
-4. Drag the radius control point to resize the circle.
-5. Add shared undo/redo snapshots for create circle, move whole shape, and control-point drag.
+1. Extend control-point editing to polyline, polygon, and brush shapes.
+2. Add delete selected shape and make it undoable.
+3. Start extracting the editor toolbar into a small component once tool controls grow beyond the current prototype rail.
+4. Add tests for document mutations and history once the store stabilizes around multiple shape types.
 
 Keep this client-only at first. Persisting drafts, edit sessions, locks, and changed-pixel limits should wait until the document shape, renderer, and first mutation path feel stable.
