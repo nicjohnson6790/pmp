@@ -4,6 +4,8 @@ import { RouterLink, useRoute } from 'vue-router'
 import { CardDetailResponse, TileDetailResponse } from '../api'
 import { cardsApi, tilesApi } from '../api'
 import DrawingCanvas from './DrawingCanvas.vue'
+import EditorContextPanel from './EditorContextPanel.vue'
+import EditorToolRail from './EditorToolRail.vue'
 import LayerManager from './LayerManager.vue'
 import { sampleTileDocument } from '../editor/sampleDrawingDocument'
 import { useDrawingDocument } from '../editor/useDrawingDocument'
@@ -17,17 +19,21 @@ const isContextPanelCollapsed = ref(false)
 const {
   activeFill,
   activeTool,
+  addDraftPoint,
   beginCircle,
   beginControlPointDrag,
+  beginPointShape,
   beginShapeMove,
   canDeleteSelection,
   canRedo,
   canUndo,
   deleteSelectedNode,
   document: drawingDocument,
+  finishDraftPointShape,
   finishControlPointDrag,
   finishDraftCircle,
   finishShapeMove,
+  isDraftingPointShape,
   redo,
   selectNode,
   selectedNodeId,
@@ -36,6 +42,7 @@ const {
   undo,
   updateControlPointDrag,
   updateDraftCircle,
+  updateDraftPointShape,
   updateShapeMove,
 } = useDrawingDocument(sampleTileDocument)
 
@@ -88,6 +95,10 @@ function formatCoordinate(nextTile?: { x?: number; y?: number }) {
   return nextTile ? `(${nextTile.x ?? 0}, ${nextTile.y ?? 0})` : ''
 }
 
+function toggleContextPanel() {
+  isContextPanelCollapsed.value = !isContextPanelCollapsed.value
+}
+
 function syncActiveColorFromCard(nextCard: CardDetailResponse) {
   const firstColor = nextCard.palette?.colors?.[0]?.hex
   if (firstColor) {
@@ -124,6 +135,12 @@ function handleEditorShortcut(event: KeyboardEvent) {
   if (event.key === 'Delete' || event.key === 'Backspace') {
     event.preventDefault()
     deleteSelectedNode()
+    return
+  }
+
+  if (event.key === 'Enter' && isDraftingPointShape.value) {
+    event.preventDefault()
+    finishDraftPointShape()
   }
 }
 
@@ -157,111 +174,48 @@ function isTypingTarget(target: EventTarget | null) {
     <div v-if="isLoading" class="empty-state panel-empty">Loading editor...</div>
 
     <div v-else-if="tile && card" class="tile-editor-layout">
-      <aside class="editor-context-panel" aria-label="Editor context">
-        <button
-          class="tool-button context-toggle"
-          type="button"
-          :title="isContextPanelCollapsed ? 'Show editor context' : 'Hide editor context'"
-          @click="isContextPanelCollapsed = !isContextPanelCollapsed"
-        >
-          {{ isContextPanelCollapsed ? '>' : '<' }}
-        </button>
-
-        <div v-if="!isContextPanelCollapsed" class="editor-context-content">
-          <header class="editor-context-header">
-            <div>
-              <h1 id="tile-editor-heading">Tile editor</h1>
-              <p>{{ formatCoordinate(tile) }} with {{ card.title }}</p>
-            </div>
-            <RouterLink class="secondary-button route-button" to="/tiles">Back to tiles</RouterLink>
-          </header>
-
-          <section class="active-card-panel" aria-label="Active card">
-            <div class="card-preview-header">
-              <span>{{ card.actionType }}</span>
-              <span>Skip {{ card.skipNumber }} / Hint {{ card.hintNumber }}</span>
-            </div>
-            <h2>{{ card.title }}</h2>
-            <p>{{ card.prompt }}</p>
-            <div class="palette-strip editor-palette-strip" aria-label="Active palette">
-              <button
-                v-for="color in paletteColors"
-                :key="`${color.id}-${color.hex}`"
-                class="palette-color-button"
-                :class="{ selected: color.hex === activeFill }"
-                type="button"
-                :style="{ background: color.hex }"
-                :title="`${color.name}: ${color.hex}`"
-                @click="color.hex && setActiveColor(color.hex)"
-              ></button>
-            </div>
-          </section>
-        </div>
-      </aside>
+      <EditorContextPanel
+        :active-fill="activeFill"
+        :card="card"
+        :is-collapsed="isContextPanelCollapsed"
+        :palette-colors="paletteColors"
+        :tile="tile"
+        @set-active-color="setActiveColor"
+        @toggle-collapsed="toggleContextPanel"
+      />
 
       <section class="drawing-editor-shell" aria-label="Drawing editor">
-        <div class="tool-rail" aria-label="Editor tools">
-          <button
-            class="tool-button"
-            :class="{ active: activeTool === 'edit' }"
-            type="button"
-            title="Edit selected control points"
-            :disabled="!selectedNodeId"
-            @click="setActiveTool('edit')"
-          >
-            E
-          </button>
-          <button
-            class="tool-button"
-            :class="{ active: activeTool === 'move' }"
-            type="button"
-            title="Move selected layer"
-            :disabled="!selectedNodeId"
-            @click="setActiveTool('move')"
-          >
-            M
-          </button>
-          <button class="tool-button tool-divider" type="button" title="Brush" disabled>B</button>
-          <button class="tool-button" type="button" title="Polyline" disabled>L</button>
-          <button
-            class="tool-button"
-            :class="{ active: activeTool === 'circle' }"
-            type="button"
-            title="Circle"
-            @click="setActiveTool('circle')"
-          >
-            C
-          </button>
-          <button class="tool-button" type="button" title="Polygon" disabled>P</button>
-          <button class="tool-button tool-divider" type="button" title="Undo" :disabled="!canUndo" @click="undo">
-            U
-          </button>
-          <button class="tool-button" type="button" title="Redo" :disabled="!canRedo" @click="redo">
-            R
-          </button>
-          <button
-            class="tool-button"
-            type="button"
-            title="Delete selected layer"
-            :disabled="!canDeleteSelection"
-            @click="deleteSelectedNode"
-          >
-            X
-          </button>
-        </div>
+        <EditorToolRail
+          :active-tool="activeTool"
+          :can-delete-selection="canDeleteSelection"
+          :can-redo="canRedo"
+          :can-undo="canUndo"
+          :has-selection="Boolean(selectedNodeId)"
+          :is-drafting-point-shape="isDraftingPointShape"
+          @delete-selection="deleteSelectedNode"
+          @finish-draft-point-shape="finishDraftPointShape"
+          @redo="redo"
+          @set-active-tool="setActiveTool"
+          @undo="undo"
+        />
 
         <div class="tile-canvas-stage">
           <DrawingCanvas
             :active-tool="activeTool"
             :document="drawingDocument"
+            :is-drafting-point-shape="isDraftingPointShape"
             :selected-node-id="selectedNodeId"
+            @add-draft-point="addDraftPoint"
             @begin-circle="beginCircle"
             @begin-control-point-drag="beginControlPointDrag"
+            @begin-point-shape="beginPointShape"
             @begin-shape-move="beginShapeMove"
+            @finish-draft-point-shape="finishDraftPointShape"
             @finish-control-point-drag="finishControlPointDrag"
             @finish-shape-move="finishShapeMove"
             @update-circle="updateDraftCircle"
             @update-control-point-drag="updateControlPointDrag"
+            @update-draft-point-shape="updateDraftPointShape"
             @update-shape-move="updateShapeMove"
             @finish-circle="finishDraftCircle"
           />

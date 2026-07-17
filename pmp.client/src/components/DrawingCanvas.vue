@@ -6,6 +6,7 @@ import { getDocumentControlPoints, renderDrawingDocument } from '../editor/drawi
 const props = defineProps<{
   activeTool: DrawingTool
   document: DrawingDocument
+  isDraftingPointShape: boolean
   selectedNodeId?: string
 }>()
 
@@ -13,6 +14,10 @@ const emit = defineEmits<{
   beginCircle: [center: Point]
   updateCircle: [radiusPoint: Point]
   finishCircle: []
+  beginPointShape: [point: Point, shapeType: 'polyline' | 'polygon']
+  addDraftPoint: [point: Point]
+  updateDraftPointShape: [point: Point]
+  finishDraftPointShape: []
   beginControlPointDrag: [controlPoint: ShapeControlPoint, startPoint: Point]
   updateControlPointDrag: [point: Point]
   finishControlPointDrag: []
@@ -49,6 +54,16 @@ function renderCanvas() {
 }
 
 function handlePointerDown(event: PointerEvent) {
+  if (
+    event.button === 2 &&
+    props.isDraftingPointShape &&
+    (props.activeTool === 'polyline' || props.activeTool === 'polygon')
+  ) {
+    event.preventDefault()
+    emit('finishDraftPointShape')
+    return
+  }
+
   const documentPoint = getDocumentPoint(event)
 
   if (props.activeTool === 'edit') {
@@ -70,6 +85,15 @@ function handlePointerDown(event: PointerEvent) {
     return
   }
 
+  if (props.activeTool === 'polyline' || props.activeTool === 'polygon') {
+    if (props.isDraftingPointShape) {
+      emit('addDraftPoint', documentPoint)
+    } else {
+      emit('beginPointShape', documentPoint, props.activeTool)
+    }
+    return
+  }
+
   if (props.activeTool !== 'circle') {
     return
   }
@@ -87,6 +111,11 @@ function handlePointerMove(event: PointerEvent) {
 
   if (isDraggingControlPoint.value) {
     emit('updateControlPointDrag', getDocumentPoint(event))
+    return
+  }
+
+  if ((props.activeTool === 'polyline' || props.activeTool === 'polygon') && props.isDraftingPointShape) {
+    emit('updateDraftPointShape', getDocumentPoint(event))
     return
   }
 
@@ -124,6 +153,23 @@ function handlePointerUp(event: PointerEvent) {
   emit('finishCircle')
 }
 
+function handleDoubleClick(event: MouseEvent) {
+  if ((props.activeTool !== 'polyline' && props.activeTool !== 'polygon') || !props.isDraftingPointShape) {
+    return
+  }
+
+  event.preventDefault()
+  emit('finishDraftPointShape')
+}
+
+function handleContextMenu(event: MouseEvent) {
+  if ((props.activeTool !== 'polyline' && props.activeTool !== 'polygon') || !props.isDraftingPointShape) {
+    return
+  }
+
+  event.preventDefault()
+}
+
 function findControlPointAt(documentPoint: Point): ShapeControlPoint | undefined {
   const hitRadius = 20
   return getDocumentControlPoints(props.document, props.selectedNodeId).find((controlPoint) => {
@@ -157,5 +203,7 @@ function getDocumentPoint(event: PointerEvent): Point {
     @pointermove="handlePointerMove"
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
+    @dblclick="handleDoubleClick"
+    @contextmenu="handleContextMenu"
   ></canvas>
 </template>

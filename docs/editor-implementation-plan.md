@@ -19,13 +19,13 @@ Card CRUD/editor is now the second working product slice. The app domain has a `
 
 Tile scaffolding is the third working slice. The app domain has a `Tile` entity and `AddTiles` migration, the server exposes authenticated tile list/detail/create/archive endpoints, NSwag generates the tile client, and the Vue app has a routed tile workspace with a temporary coordinate CRUD/browser view. The local AppDb has had `AddTiles` applied. The CRUD view is mainly a test harness and is not expected to be the final map browser UI.
 
-Tile editor entry is started on the client. From the tile detail panel, a user can choose an existing card and open `/tiles/:tileId/editor/:cardId`. `TileEditorWorkspace.vue` loads the chosen tile and card, displays the card prompt, skip/hint numbers, palette swatches, a placeholder landscape tile canvas, creation tool placeholders, and an empty layer manager. This is not a persisted edit session yet.
+Tile editor entry is started on the client. From the tile detail panel, a user can choose an existing card and open `/tiles/:tileId/editor/:cardId`. `TileEditorWorkspace.vue` loads the chosen tile and card, composes extracted context/tool components, displays the card prompt, skip/hint numbers, palette swatches, a landscape tile canvas, and the layer manager. This is not a persisted edit session yet.
 
-Shared drawing foundation is now started on the client. `src/editor` defines the first drawing document types, sample document, tree helpers, canvas renderer, and `useDrawingDocument` store/composable. `DrawingCanvas.vue` renders the document, `LayerManager.vue` owns click selection, selected shapes are highlighted on the canvas, and the circle tool can create new top-level circle shapes by dragging on the canvas with a palette-constrained color.
+Shared drawing foundation is now started on the client. `src/editor` defines the first drawing document types, sample document, tree helpers, canvas renderer, and `useDrawingDocument` store/composable. `DrawingCanvas.vue` renders the document, `LayerManager.vue` owns click selection, selected shapes are highlighted on the canvas, and the circle, polyline, and polygon tools can create new top-level shapes with palette-constrained colors. Polyline and polygon drafts can be finished with Enter, double-click, right-click, or the tool-rail finish button.
 
-The tile editor shell is canvas-first. Tile/card context, the active card prompt, palette, and navigation live in a collapsible left context panel so the drawing editor can expand when the panel is collapsed.
+The tile editor shell is canvas-first. Tile/card context, the active card prompt, palette, and navigation live in a collapsible left context panel so the drawing editor can expand when the panel is collapsed. Palette access should be preserved in a compact form when that panel is collapsed.
 
-Next implementation focus: layer-manager-driven editor growth. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions.
+Next implementation focus: layer-manager-driven editor growth. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions. The next editing controls should include layer renaming and selected-shape style editing for stroke width, stroke color, and fill color where applicable. Text should become a future first-class tool with rotation support.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -202,11 +202,18 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `ShapeNode`
   - `id`
   - `type: "shape"`
-  - `shapeType: "circle" | "polyline" | "polygon" | "brush"`
+  - `shapeType: "circle" | "polyline" | "polygon" | "brush" | "text"`
   - `name`
   - `transform`
   - `style`
   - `points`
+- Text shape extension:
+  - `text`
+  - `fontFamily`
+  - `fontWeight`
+  - `baselinePoint`
+  - `heightPoint`
+  - The baseline point anchors the text. The vector from baseline to height point describes text size and rotation.
 
 ### Components
 
@@ -218,14 +225,20 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `LayerManager.vue`
   - Shows nested groups/shapes.
   - Handles selection.
+  - Supports renaming layers.
   - Supports drag/drop reorder and nesting.
 - `ToolRail.vue`
-  - Creation/edit tools such as brush, polyline, circle, polygon, eyedropper, pan/zoom, and transform modes.
+  - Creation/edit tools such as brush, text, polyline, circle, polygon, eyedropper, pan/zoom, and transform modes.
   - Selection should be driven from the layer manager rather than a select tool in the tool rail.
   - Control-point edit mode should be automatically activated when a layer is selected.
   - Whole-shape movement should use a separate move tool.
 - `PaletteSwatches.vue`
   - Displays available copied colors from the active card palette.
+  - Remains available in compact form when the left editor context panel is collapsed.
+- `LayerStyleControls.vue`
+  - Edits the selected shape's stroke width, stroke color, and fill color where applicable.
+  - Uses only colors from the active card palette.
+  - Sends changes through the editor store so style edits are undoable.
 - `DrawingEditorShell.vue`
   - Composes canvas, tools, layer manager, palette, and contextual panels.
   - Keep card/tile context collapsible so the canvas can use the maximum practical workspace.
@@ -235,13 +248,17 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 1. Static rendering of a hardcoded document.
 2. Selection from layer manager.
 3. Canvas highlighting for the layer-manager selection.
-4. Create polygon/polyline/brush/circle.
+4. Create circle, polyline, and polygon.
 5. Edit control points for the selected layer item, with a separate move tool for moving the whole shape.
 6. Shared undo/redo for document mutations.
-7. Group/ungroup.
-8. Drag/drop reorder.
-9. Move nodes into/out of groups with transform preservation.
-10. Group move/rotate/resize.
+7. Rename layers and edit selected-shape fill/stroke/stroke width.
+8. Keep palette controls accessible when the context panel is collapsed.
+9. Add brush creation.
+10. Add text creation with editable baseline and height/orientation control points.
+11. Group/ungroup.
+12. Drag/drop reorder.
+13. Move nodes into/out of groups with transform preservation.
+14. Group move/rotate/resize.
 
 ## Phase 5: Tile Model and Tile Browser
 
@@ -338,8 +355,12 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `TileEditorView.vue`
   - Loads edit session.
   - Shows card prompt, skip number, hint number, assigned tile coordinate, lock timer in a collapsible context panel.
+  - Keeps palette controls reachable even when the context panel is collapsed.
   - Shows starting tile image as bottom visual layer or locked background layer.
   - Passes palette colors into shared drawing editor.
+  - Lets users rename layers.
+  - Lets users change selected-shape stroke width, stroke color, and fill color where applicable.
+  - Lets users add text layers and rotate/size them through baseline and height/orientation control points.
   - Tracks live changed-pixel percentage against the starting image.
   - Blocks manual save/autosave when over limit.
   - Sends only layer-list JSON to the server.
@@ -404,6 +425,7 @@ This is enabled by `create card` cards and should reuse the shared drawing edito
 - Drawing document render snapshots for basic shapes.
 - Transform preservation when moving into/out of groups.
 - Undo/redo for shape edits and layer moves.
+- Undo/redo for layer renames and style edits.
 - Tile editor blocks over-limit saves.
 - Autosave timer behavior.
 

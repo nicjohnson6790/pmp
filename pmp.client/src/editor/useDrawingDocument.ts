@@ -13,6 +13,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const activeFill = ref('#DFF7EA')
   const activeStroke = ref('#12684D')
   const draftShapeId = ref<string>()
+  const draftPointShapeId = ref<string>()
   const createdShapeCount = ref(0)
   const controlPointDrag = ref<{
     controlPoint: ShapeControlPoint
@@ -27,6 +28,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const canUndo = computed(() => undoStack.value.length > 0)
   const canRedo = computed(() => redoStack.value.length > 0)
   const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
+  const isDraftingPointShape = computed(() => Boolean(draftPointShapeId.value))
 
   const selectedToolLabel = computed(() => {
     if (activeTool.value === 'circle') {
@@ -99,6 +101,71 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     }
 
     draftShapeId.value = undefined
+  }
+
+  function beginPointShape(startPoint: Point, shapeType: 'polyline' | 'polygon') {
+    if (draftPointShapeId.value) {
+      finishDraftPointShape()
+    }
+
+    pushHistorySnapshot()
+    createdShapeCount.value += 1
+    const shape: ShapeNode = {
+      id: `${shapeType}-${Date.now()}-${createdShapeCount.value}`,
+      type: 'shape',
+      shapeType,
+      name: `${shapeType === 'polyline' ? 'Polyline' : 'Polygon'} ${createdShapeCount.value}`,
+      transform: identityTransform(),
+      style: {
+        fill: shapeType === 'polygon' ? activeFill.value : undefined,
+        stroke: activeStroke.value,
+        strokeWidth: 8,
+      },
+      points: [startPoint, startPoint],
+    }
+
+    document.value.nodes.push(shape)
+    draftPointShapeId.value = shape.id
+    selectedNodeId.value = shape.id
+  }
+
+  function addDraftPoint(point: Point) {
+    const shape = getDraftPointShape()
+    if (!shape) {
+      return
+    }
+
+    const previewPointIndex = shape.points.length - 1
+    shape.points[previewPointIndex] = point
+    shape.points.push(point)
+  }
+
+  function updateDraftPointShape(point: Point) {
+    const shape = getDraftPointShape()
+    if (!shape) {
+      return
+    }
+
+    const previewPointIndex = shape.points.length - 1
+    shape.points[previewPointIndex] = point
+  }
+
+  function finishDraftPointShape() {
+    const shape = getDraftPointShape()
+    if (!shape) {
+      draftPointShapeId.value = undefined
+      return
+    }
+
+    shape.points.pop()
+    const minimumPointCount = shape.shapeType === 'polygon' ? 3 : 2
+    if (shape.points.length < minimumPointCount) {
+      removeDrawingNode(document.value, shape.id)
+      undoStack.value.pop()
+      selectedNodeId.value = undefined
+    }
+
+    draftPointShapeId.value = undefined
   }
 
   function beginControlPointDrag(controlPoint: ShapeControlPoint, startPoint: Point) {
@@ -222,6 +289,16 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     )
   }
 
+  function getDraftPointShape() {
+    const id = draftPointShapeId.value
+    if (!id) {
+      return undefined
+    }
+
+    const node = findDrawingNode(document.value, id)
+    return node?.type === 'shape' && (node.shapeType === 'polyline' || node.shapeType === 'polygon') ? node : undefined
+  }
+
   function constrainCircleRadiusPoint(shape: ShapeNode, nextPoint: Point) {
     const center = shape.points[0]
     if (!center) {
@@ -260,6 +337,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
 
   function clearTransientEditState() {
     draftShapeId.value = undefined
+    draftPointShapeId.value = undefined
     controlPointDrag.value = undefined
     shapeMoveDrag.value = undefined
   }
@@ -272,13 +350,17 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     canRedo,
     canUndo,
     document,
+    isDraftingPointShape,
     selectedNodeId,
     selectedToolLabel,
+    addDraftPoint,
     beginCircle,
     beginControlPointDrag,
+    beginPointShape,
     beginShapeMove,
     deleteSelectedNode,
     finishDraftCircle,
+    finishDraftPointShape,
     finishControlPointDrag,
     finishShapeMove,
     redo,
@@ -288,6 +370,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     undo,
     updateControlPointDrag,
     updateDraftCircle,
+    updateDraftPointShape,
     updateShapeMove,
   }
 }

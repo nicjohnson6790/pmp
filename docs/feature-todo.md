@@ -102,11 +102,15 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
   - `polyline`: ordered control points with stroke styling.
   - `polygon`: ordered control points with fill/stroke styling.
   - `brush`: continuously sampled polyline with stroke styling.
+  - `text`: text content with baseline and height/orientation control points.
 - Shared shape style:
   - Fill color.
   - Stroke color.
   - Stroke width.
   - Optional hidden/locked flags later.
+- Existing shapes should support editing stroke width, stroke color, and fill color where the shape type uses those properties.
+- Layers should be renameable from the editor UI, with names stored in the layer-list document.
+- Text layers should support rotation. A baseline control point can anchor the text, while a second height/orientation control point describes both size and rotation relative to that anchor.
 - Store transforms at group level for grouped move/rotate/resize operations.
 - Preserve visual world position when moving nodes into or out of groups:
   - When a node leaves a group, bake the parent/group transform into the child.
@@ -136,6 +140,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Display a nested, reorderable tree of groups and shapes.
 - Allow drag/drop reordering within the tree.
 - Allow dragging items into and out of groups.
+- Allow renaming groups and shapes.
 - Select items from the list and notify the canvas. Canvas click-to-select should not be used.
 - Automatically put the editor into control-point edit mode when a layer is selected.
 - Keep whole-shape movement in a separate move tool.
@@ -146,6 +151,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
   - Group/ungroup.
   - Move item into or out of group.
   - Change control points.
+  - Rename layer.
   - Change fill/stroke/stroke width.
   - Apply group transform.
 - Expose a small editing API to the canvas rather than letting the canvas reach into internal state freely.
@@ -156,6 +162,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Keep the drawing document in one authoritative store/composable owned by the editor view or layer manager.
 - The canvas should be responsible for pointer math and rendering.
 - The layer manager/editor store should be responsible for mutations, history, selection, and serialization.
+- Palette controls should remain accessible when the left context panel is collapsed, such as through a compact swatch strip or popover near the tool rail.
 - Redraw after every committed document change by rendering the ordered tree from bottom to top.
 
 ### Reuse for Cards
@@ -327,9 +334,11 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
   - Canvas sized to the canonical tile ratio.
   - Starting tile image shown as the bottom visual layer or locked background layer.
   - Collapsible context panel for active card, skip number, hint number, assigned tile coordinate, palette, and navigation.
-  - Palette-limited swatches.
+  - Palette-limited swatches that remain reachable when the context panel is collapsed.
   - Tool rail placeholder for move/control-point mode, group transform, brush, polyline, circle, polygon/region, eyedropper, pan/zoom, undo/redo.
-  - Layer manager with nested groups, drag/drop reordering, and selection.
+  - Future text tool with rotation and size controlled by baseline and height/orientation points.
+  - Layer manager with nested groups, drag/drop reordering, renaming, and selection.
+  - Selected-layer style controls for stroke width, stroke color, and fill color where applicable.
   - Save draft action.
 - Start with a minimal structured drawing payload, even if only a subset of drawing tools works at first.
 - Ensure the editor never offers colors outside the active card palette.
@@ -340,6 +349,9 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Send only the structured layer-list document to the server on save/complete.
 - Autosave every `5` minutes and provide a manual save action.
 - Highlight and edit control points for selected shapes.
+- Rename selected layers.
+- Change selected-shape stroke width, stroke color, and fill color using only the active card palette where colors are applicable.
+- Add and edit text layers, including rotation and size through baseline and height/orientation control points.
 - Support group move/rotate/resize with transforms stored on the group.
 - Preserve visual position/scale/rotation when moving items into or out of groups.
 - Keep all document mutations undo/redoable through the layer manager/editor store.
@@ -351,6 +363,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - What server-side renderer should generate the newest tile image from the layer-list document?
 - Should Bezier curves be part of the first drawing shape set, or should they wait until after circle/polyline/polygon/brush are solid?
 - How should freehand brush sampling be simplified so documents do not become too large?
+- What text controls should ship first beyond content, size, and rotation: font family, weight, alignment, outline, or background?
 - Should the starting tile image appear in the layer manager as a locked background layer, or only render beneath editable layers?
 
 ## Future Governance
@@ -403,6 +416,7 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - Expired unfinished edits promote the last saved draft to the current tile version and preserve that layer-list revision in tile history.
 - The tile editor shows the active card prompt, skip number, hint number, and assigned tile.
 - The tile editor only exposes colors from the card palette.
+- The tile editor keeps palette controls accessible when the editor context panel is collapsed.
 - Palette colors are copied onto shapes rather than referenced live from tiles/card artwork.
 - Create-tile cards allow a user to place a new tile adjacent to an existing tile.
 - Create-tile placement uses open 4-way adjacency, the map is allowed to have holes, and create-tile cards do not move the global active tile cursor.
@@ -412,8 +426,10 @@ The map tile editor should be a structured canvas editor, not a simple raster pa
 - The editor shows the starting tile image as the bottom visual layer or locked background layer.
 - Saves are blocked when the live changed-pixel count exceeds the configured limit.
 - The client sends layer-list documents to the server; the server renders the newest tile image and performs the authoritative changed-pixel check.
-- The tile editor can create and render circle, polyline, polygon, and brush shapes.
+- The tile editor can create and render circle, polyline, polygon, brush, and text shapes.
 - The tile editor can select shapes from the layer manager, edit their control points on the canvas, and move selected shapes with a move tool.
+- Text layers can be rotated and sized through editable baseline and height/orientation control points.
+- The tile editor can rename layers and edit selected-shape stroke width, stroke color, and fill color where applicable.
 - The layer manager can nest groups and reorder items with drag/drop.
 - Moving items into or out of groups preserves their visual position, size, and rotation.
 - Group transforms are stored at the group level.
