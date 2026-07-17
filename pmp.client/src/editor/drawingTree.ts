@@ -1,5 +1,7 @@
 import type { DrawingDocument, DrawingNode, FlattenedDrawingNode } from './drawingTypes'
 
+export type ReorderDirection = 'up' | 'down'
+
 export function flattenDrawingNodes(document: DrawingDocument): FlattenedDrawingNode[] {
   return flattenNodes(document.nodes, 0)
 }
@@ -18,6 +20,41 @@ export function removeDrawingNode(document: DrawingDocument, nodeId?: string): b
   }
 
   return removeNode(document.nodes, nodeId)
+}
+
+export function renameDrawingNode(document: DrawingDocument, nodeId: string | undefined, name: string): boolean {
+  const node = findDrawingNode(document, nodeId)
+  if (!node) {
+    return false
+  }
+
+  node.name = name
+  return true
+}
+
+export function moveDrawingNode(document: DrawingDocument, nodeId: string | undefined, direction: ReorderDirection): boolean {
+  if (!nodeId) {
+    return false
+  }
+
+  const siblings = findSiblingList(document.nodes, nodeId)
+  if (!siblings) {
+    return false
+  }
+
+  const index = siblings.findIndex((node) => node.id === nodeId)
+  const nextIndex = direction === 'up' ? index - 1 : index + 1
+  if (index < 0 || nextIndex < 0 || nextIndex >= siblings.length) {
+    return false
+  }
+
+  const [node] = siblings.splice(index, 1)
+  if (!node) {
+    return false
+  }
+
+  siblings.splice(nextIndex, 0, node)
+  return true
 }
 
 function flattenNodes(nodes: DrawingNode[], depth: number): FlattenedDrawingNode[] {
@@ -62,4 +99,21 @@ function removeNode(nodes: DrawingNode[], nodeId: string): boolean {
   }
 
   return false
+}
+
+function findSiblingList(nodes: DrawingNode[], nodeId: string): DrawingNode[] | undefined {
+  if (nodes.some((node) => node.id === nodeId)) {
+    return nodes
+  }
+
+  for (const node of nodes) {
+    if (node.type === 'group') {
+      const childSiblings = findSiblingList(node.children, nodeId)
+      if (childSiblings) {
+        return childSiblings
+      }
+    }
+  }
+
+  return undefined
 }

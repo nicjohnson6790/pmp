@@ -7,6 +7,7 @@ import DrawingCanvas from './DrawingCanvas.vue'
 import EditorContextPanel from './EditorContextPanel.vue'
 import EditorToolRail from './EditorToolRail.vue'
 import LayerManager from './LayerManager.vue'
+import LayerStyleControls from './LayerStyleControls.vue'
 import { sampleTileDocument } from '../editor/sampleDrawingDocument'
 import { useDrawingDocument } from '../editor/useDrawingDocument'
 
@@ -20,6 +21,7 @@ const {
   activeFill,
   activeTool,
   addDraftPoint,
+  beginBrush,
   beginCircle,
   beginControlPointDrag,
   beginPointShape,
@@ -29,20 +31,28 @@ const {
   canUndo,
   deleteSelectedNode,
   document: drawingDocument,
+  createText,
+  finishDraftBrush,
   finishDraftPointShape,
   finishControlPointDrag,
   finishDraftCircle,
   finishShapeMove,
   isDraftingPointShape,
   redo,
+  renameNode,
+  reorderNode,
   selectNode,
   selectedNodeId,
+  selectedShape,
   setActiveColor,
   setActiveTool,
   undo,
   updateControlPointDrag,
+  updateDraftBrush,
   updateDraftCircle,
   updateDraftPointShape,
+  updateSelectedShapeStyle,
+  updateSelectedText,
   updateShapeMove,
 } = useDrawingDocument(sampleTileDocument)
 
@@ -206,10 +216,13 @@ function isTypingTarget(target: EventTarget | null) {
             :is-drafting-point-shape="isDraftingPointShape"
             :selected-node-id="selectedNodeId"
             @add-draft-point="addDraftPoint"
+            @begin-brush="beginBrush"
             @begin-circle="beginCircle"
             @begin-control-point-drag="beginControlPointDrag"
             @begin-point-shape="beginPointShape"
             @begin-shape-move="beginShapeMove"
+            @create-text="createText"
+            @finish-brush="finishDraftBrush"
             @finish-draft-point-shape="finishDraftPointShape"
             @finish-control-point-drag="finishControlPointDrag"
             @finish-shape-move="finishShapeMove"
@@ -218,15 +231,28 @@ function isTypingTarget(target: EventTarget | null) {
             @update-draft-point-shape="updateDraftPointShape"
             @update-shape-move="updateShapeMove"
             @finish-circle="finishDraftCircle"
+            @update-brush="updateDraftBrush"
           />
         </div>
+      </section>
 
+      <aside class="editor-side-panel">
+        <LayerStyleControls
+          :active-fill="activeFill"
+          :palette-colors="paletteColors"
+          :selected-shape="selectedShape"
+          @set-active-color="setActiveColor"
+          @update-style="updateSelectedShapeStyle"
+          @update-text="updateSelectedText"
+        />
         <LayerManager
           :document="drawingDocument"
           :selected-node-id="selectedNodeId"
+          @rename="renameNode"
+          @reorder="reorderNode"
           @select="selectNode"
         />
-      </section>
+      </aside>
     </div>
   </section>
 </template>

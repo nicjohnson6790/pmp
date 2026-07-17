@@ -121,6 +121,57 @@ describe('useDrawingDocument', () => {
     expect(store.document.value.nodes).toHaveLength(0)
   })
 
+  it('renames and reorders layers with undo support', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        firstShape(circleDocument()),
+        {
+          ...firstShape(circleDocument()),
+          id: 'circle-2',
+          name: 'Circle 2',
+        },
+      ],
+    })
+
+    store.renameNode('circle-1', 'Town green')
+    expect(store.document.value.nodes[0]?.name).toBe('Town green')
+
+    store.reorderNode('circle-1', 'down')
+    expect(store.document.value.nodes.map((node) => node.id)).toEqual(['circle-2', 'circle-1'])
+
+    store.undo()
+    expect(store.document.value.nodes.map((node) => node.id)).toEqual(['circle-1', 'circle-2'])
+
+    store.undo()
+    expect(store.document.value.nodes[0]?.name).toBe('Circle 1')
+  })
+
+  it('updates selected shape style and text content with undo support', () => {
+    const store = useDrawingDocument(circleDocument())
+
+    store.selectNode('circle-1')
+    store.updateSelectedShapeStyle({ fill: '#111111', stroke: '#222222', strokeWidth: 12 })
+
+    expect(firstShape(store.document.value).style).toEqual({
+      fill: '#111111',
+      stroke: '#222222',
+      strokeWidth: 12,
+    })
+
+    store.undo()
+    expect(firstShape(store.document.value).style.strokeWidth).toBe(8)
+
+    store.createText({ x: 50, y: 80 })
+    store.updateSelectedText('Harbor')
+    const textShape = store.document.value.nodes[1] as ShapeNode
+    expect(textShape.shapeType).toBe('text')
+    expect(textShape.text).toBe('Harbor')
+
+    store.undo()
+    expect((store.document.value.nodes[1] as ShapeNode).text).toBe('Text')
+  })
+
   it('creates point-based polyline and polygon shapes', () => {
     const store = useDrawingDocument(emptyDocument())
 
@@ -148,6 +199,26 @@ describe('useDrawingDocument', () => {
       { x: 100, y: 100 },
       { x: 140, y: 100 },
       { x: 130, y: 130 },
+    ])
+  })
+
+  it('creates brush and text shapes', () => {
+    const store = useDrawingDocument(emptyDocument())
+
+    store.beginBrush({ x: 10, y: 10 })
+    store.updateDraftBrush({ x: 18, y: 14 })
+    store.updateDraftBrush({ x: 30, y: 20 })
+    store.finishDraftBrush()
+
+    expect(firstShape(store.document.value).shapeType).toBe('brush')
+    expect(firstShape(store.document.value).points.length).toBeGreaterThan(1)
+
+    store.createText({ x: 120, y: 160 })
+    const textShape = store.document.value.nodes[1] as ShapeNode
+    expect(textShape.shapeType).toBe('text')
+    expect(textShape.points).toEqual([
+      { x: 120, y: 160 },
+      { x: 120, y: 88 },
     ])
   })
 })

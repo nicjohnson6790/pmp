@@ -1,7 +1,7 @@
 import { computed, ref, toRaw } from 'vue'
-import type { DrawingDocument, DrawingTool, Point, ShapeControlPoint, ShapeNode } from './drawingTypes'
+import type { DrawingDocument, DrawingStyle, DrawingTool, Point, ShapeControlPoint, ShapeNode } from './drawingTypes'
 import { cloneDrawingDocument, identityTransform } from './drawingTypes'
-import { findDrawingNode, removeDrawingNode } from './drawingTree'
+import { findDrawingNode, moveDrawingNode, removeDrawingNode, renameDrawingNode, type ReorderDirection } from './drawingTree'
 
 const minimumCircleRadius = 8
 const historyLimit = 50
@@ -14,6 +14,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const activeStroke = ref('#12684D')
   const draftShapeId = ref<string>()
   const draftPointShapeId = ref<string>()
+  const draftBrushShapeId = ref<string>()
   const createdShapeCount = ref(0)
   const controlPointDrag = ref<{
     controlPoint: ShapeControlPoint
@@ -29,6 +30,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const canRedo = computed(() => redoStack.value.length > 0)
   const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
   const isDraftingPointShape = computed(() => Boolean(draftPointShapeId.value))
+  const selectedShape = computed(() => findSelectedShape())
 
   const selectedToolLabel = computed(() => {
     if (activeTool.value === 'circle') {
@@ -39,7 +41,15 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
       return 'Edit'
     }
 
-    return activeTool.value === 'move' ? 'Move' : activeTool.value
+    if (activeTool.value === 'move') {
+      return 'Move'
+    }
+
+    if (activeTool.value === 'text') {
+      return 'Text'
+    }
+
+    return activeTool.value
   })
 
   function selectNode(nodeId: string) {
@@ -168,6 +178,77 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     draftPointShapeId.value = undefined
   }
 
+  function beginBrush(startPoint: Point) {
+    pushHistorySnapshot()
+    createdShapeCount.value += 1
+    const shape: ShapeNode = {
+      id: `brush-${Date.now()}-${createdShapeCount.value}`,
+      type: 'shape',
+      shapeType: 'brush',
+      name: `Brush ${createdShapeCount.value}`,
+      transform: identityTransform(),
+      style: {
+        stroke: activeStroke.value,
+        strokeWidth: 18,
+      },
+      points: [startPoint],
+    }
+
+    document.value.nodes.push(shape)
+    draftBrushShapeId.value = shape.id
+    selectedNodeId.value = shape.id
+  }
+
+  function updateDraftBrush(point: Point) {
+    const shape = getDraftBrushShape()
+    const lastPoint = shape?.points.at(-1)
+    if (!shape || !lastPoint || Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y) < 4) {
+      return
+    }
+
+    shape.points.push(point)
+  }
+
+  function finishDraftBrush() {
+    const shape = getDraftBrushShape()
+    if (!shape) {
+      draftBrushShapeId.value = undefined
+      return
+    }
+
+    if (shape.points.length < 2) {
+      removeDrawingNode(document.value, shape.id)
+      undoStack.value.pop()
+      selectedNodeId.value = undefined
+    }
+
+    draftBrushShapeId.value = undefined
+  }
+
+  function createText(point: Point) {
+    pushHistorySnapshot()
+    createdShapeCount.value += 1
+    const shape: ShapeNode = {
+      id: `text-${Date.now()}-${createdShapeCount.value}`,
+      type: 'shape',
+      shapeType: 'text',
+      name: `Text ${createdShapeCount.value}`,
+      transform: identityTransform(),
+      style: {
+        fill: activeFill.value,
+        strokeWidth: 1,
+      },
+      points: [point, { x: point.x, y: point.y - 72 }],
+      text: 'Text',
+      fontFamily: 'serif',
+      fontWeight: '700',
+    }
+
+    document.value.nodes.push(shape)
+    selectedNodeId.value = shape.id
+    activeTool.value = 'edit'
+  }
+
   function beginControlPointDrag(controlPoint: ShapeControlPoint, startPoint: Point) {
     if (controlPoint.nodeId !== selectedNodeId.value) {
       return
@@ -278,6 +359,65 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     clearTransientEditState()
   }
 
+  function renameNode(nodeId: string, name: string) {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      return
+    }
+
+    const node = findDrawingNode(document.value, nodeId)
+    if (!node || node.name === trimmedName) {
+      return
+    }
+
+    pushHistorySnapshot()
+    renameDrawingNode(document.value, nodeId, trimmedName)
+  }
+
+  function updateSelectedShapeStyle(style: Partial<DrawingStyle>) {
+    const shape = findSelectedShape()
+    if (!shape) {
+      return
+    }
+
+    const nextStyle = {
+      ...shape.style,
+      ...style,
+      strokeWidth: Math.max(1, Math.min(120, style.strokeWidth ?? shape.style.strokeWidth)),
+    }
+
+    if (JSON.stringify(shape.style) === JSON.stringify(nextStyle)) {
+      return
+    }
+
+    pushHistorySnapshot()
+    shape.style = nextStyle
+  }
+
+  function updateSelectedText(text: string) {
+    const shape = findSelectedShape()
+    if (!shape || shape.shapeType !== 'text' || shape.text === text) {
+      return
+    }
+
+    pushHistorySnapshot()
+    shape.text = text
+    if (shape.name.startsWith('Text ')) {
+      shape.name = text.trim() || shape.name
+    }
+  }
+
+  function reorderNode(nodeId: string, direction: ReorderDirection) {
+    pushHistorySnapshot()
+    const wasMoved = moveDrawingNode(document.value, nodeId, direction)
+    if (!wasMoved) {
+      undoStack.value.pop()
+      return
+    }
+
+    selectedNodeId.value = nodeId
+  }
+
   function getDraftCircle() {
     const id = draftShapeId.value
     if (!id) {
@@ -297,6 +437,16 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
 
     const node = findDrawingNode(document.value, id)
     return node?.type === 'shape' && (node.shapeType === 'polyline' || node.shapeType === 'polygon') ? node : undefined
+  }
+
+  function getDraftBrushShape() {
+    const id = draftBrushShapeId.value
+    if (!id) {
+      return undefined
+    }
+
+    const node = findDrawingNode(document.value, id)
+    return node?.type === 'shape' && node.shapeType === 'brush' ? node : undefined
   }
 
   function constrainCircleRadiusPoint(shape: ShapeNode, nextPoint: Point) {
@@ -338,6 +488,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   function clearTransientEditState() {
     draftShapeId.value = undefined
     draftPointShapeId.value = undefined
+    draftBrushShapeId.value = undefined
     controlPointDrag.value = undefined
     shapeMoveDrag.value = undefined
   }
@@ -352,25 +503,34 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     document,
     isDraftingPointShape,
     selectedNodeId,
+    selectedShape,
     selectedToolLabel,
     addDraftPoint,
+    beginBrush,
     beginCircle,
     beginControlPointDrag,
     beginPointShape,
     beginShapeMove,
+    createText,
     deleteSelectedNode,
+    finishDraftBrush,
     finishDraftCircle,
     finishDraftPointShape,
     finishControlPointDrag,
     finishShapeMove,
     redo,
+    renameNode,
+    reorderNode,
     selectNode,
     setActiveColor,
     setActiveTool,
     undo,
     updateControlPointDrag,
+    updateDraftBrush,
     updateDraftCircle,
     updateDraftPointShape,
+    updateSelectedShapeStyle,
+    updateSelectedText,
     updateShapeMove,
   }
 }

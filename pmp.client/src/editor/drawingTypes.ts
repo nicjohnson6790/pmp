@@ -11,7 +11,7 @@ export type Transform = {
   scaleY: number
 }
 
-export type ShapeType = 'circle' | 'polyline' | 'polygon' | 'brush'
+export type ShapeType = 'circle' | 'polyline' | 'polygon' | 'brush' | 'text'
 
 export type DrawingTool = ShapeType | 'edit' | 'move' | 'pan'
 
@@ -35,6 +35,9 @@ export type ShapeNode = {
   transform: Transform
   style: DrawingStyle
   points: Point[]
+  text?: string
+  fontFamily?: string
+  fontWeight?: string
 }
 
 export type GroupNode = {

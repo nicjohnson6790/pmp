@@ -14,6 +14,10 @@ const emit = defineEmits<{
   beginCircle: [center: Point]
   updateCircle: [radiusPoint: Point]
   finishCircle: []
+  beginBrush: [point: Point]
+  updateBrush: [point: Point]
+  finishBrush: []
+  createText: [point: Point]
   beginPointShape: [point: Point, shapeType: 'polyline' | 'polygon']
   addDraftPoint: [point: Point]
   updateDraftPointShape: [point: Point]
@@ -28,6 +32,7 @@ const emit = defineEmits<{
 
 const canvas = ref<HTMLCanvasElement>()
 const isDrawing = ref(false)
+const isBrushing = ref(false)
 const isDraggingControlPoint = ref(false)
 const isMovingShape = ref(false)
 
@@ -85,6 +90,18 @@ function handlePointerDown(event: PointerEvent) {
     return
   }
 
+  if (props.activeTool === 'text') {
+    emit('createText', documentPoint)
+    return
+  }
+
+  if (props.activeTool === 'brush') {
+    isBrushing.value = true
+    canvas.value?.setPointerCapture(event.pointerId)
+    emit('beginBrush', documentPoint)
+    return
+  }
+
   if (props.activeTool === 'polyline' || props.activeTool === 'polygon') {
     if (props.isDraftingPointShape) {
       emit('addDraftPoint', documentPoint)
@@ -104,6 +121,11 @@ function handlePointerDown(event: PointerEvent) {
 }
 
 function handlePointerMove(event: PointerEvent) {
+  if (isBrushing.value) {
+    emit('updateBrush', getDocumentPoint(event))
+    return
+  }
+
   if (isMovingShape.value) {
     emit('updateShapeMove', getDocumentPoint(event))
     return
@@ -127,6 +149,14 @@ function handlePointerMove(event: PointerEvent) {
 }
 
 function handlePointerUp(event: PointerEvent) {
+  if (isBrushing.value) {
+    isBrushing.value = false
+    canvas.value?.releasePointerCapture(event.pointerId)
+    emit('updateBrush', getDocumentPoint(event))
+    emit('finishBrush')
+    return
+  }
+
   if (isMovingShape.value) {
     isMovingShape.value = false
     canvas.value?.releasePointerCapture(event.pointerId)

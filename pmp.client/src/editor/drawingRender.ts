@@ -40,6 +40,11 @@ function renderShape(context: CanvasRenderingContext2D, shape: ShapeNode) {
     return
   }
 
+  if (shape.shapeType === 'text') {
+    renderText(context, shape)
+    return
+  }
+
   context.lineCap = shape.shapeType === 'brush' ? 'round' : 'butt'
   context.lineJoin = 'round'
   context.lineWidth = shape.style.strokeWidth
@@ -59,6 +64,33 @@ function renderShape(context: CanvasRenderingContext2D, shape: ShapeNode) {
     context.strokeStyle = shape.style.stroke
     context.stroke()
   }
+}
+
+function renderText(context: CanvasRenderingContext2D, shape: ShapeNode) {
+  const baseline = shape.points[0]
+  const heightPoint = shape.points[1]
+  if (!baseline || !heightPoint) {
+    return
+  }
+
+  const height = Math.max(12, Math.hypot(heightPoint.x - baseline.x, heightPoint.y - baseline.y))
+  const rotation = Math.atan2(heightPoint.y - baseline.y, heightPoint.x - baseline.x) + Math.PI / 2
+
+  context.save()
+  context.translate(baseline.x, baseline.y)
+  context.rotate(rotation)
+  context.font = `${shape.fontWeight ?? '700'} ${height}px ${shape.fontFamily ?? 'serif'}`
+  context.textBaseline = 'alphabetic'
+  context.lineWidth = shape.style.strokeWidth
+  if (shape.style.stroke) {
+    context.strokeStyle = shape.style.stroke
+    context.strokeText(shape.text ?? '', 0, 0)
+  }
+  if (shape.style.fill) {
+    context.fillStyle = shape.style.fill
+    context.fillText(shape.text ?? '', 0, 0)
+  }
+  context.restore()
 }
 
 function drawPointPath(context: CanvasRenderingContext2D, shape: ShapeNode) {
@@ -150,6 +182,23 @@ function getShapeBounds(shape: ShapeNode) {
       y: center.y - radius,
       width: radius * 2,
       height: radius * 2,
+    }
+  }
+
+  if (shape.shapeType === 'text') {
+    const baseline = shape.points[0]
+    const heightPoint = shape.points[1]
+    if (!baseline || !heightPoint) {
+      return undefined
+    }
+
+    const height = Math.max(12, Math.hypot(heightPoint.x - baseline.x, heightPoint.y - baseline.y))
+    const width = Math.max(height * 2, (shape.text?.length ?? 1) * height * 0.55)
+    return {
+      x: baseline.x - height,
+      y: baseline.y - height - 12,
+      width: width + height * 2,
+      height: height * 2,
     }
   }
 

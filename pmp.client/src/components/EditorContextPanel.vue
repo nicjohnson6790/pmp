@@ -61,5 +61,18 @@ function formatCoordinate(nextTile: { x?: number; y?: number }) {
         </div>
       </section>
     </div>
+
+    <div v-else class="collapsed-palette-strip" aria-label="Active palette">
+      <button
+        v-for="color in paletteColors"
+        :key="`${color.id}-${color.hex}`"
+        class="collapsed-palette-button"
+        :class="{ selected: color.hex === activeFill }"
+        type="button"
+        :style="{ background: color.hex }"
+        :title="`${color.name}: ${color.hex}`"
+        @click="color.hex && emit('setActiveColor', color.hex)"
+      ></button>
+    </div>
   </aside>
 </template>

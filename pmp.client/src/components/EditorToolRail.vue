@@ -41,7 +41,15 @@ const emit = defineEmits<{
     >
       M
     </button>
-    <button class="tool-button tool-divider" type="button" title="Brush" disabled>B</button>
+    <button
+      class="tool-button tool-divider"
+      :class="{ active: activeTool === 'brush' }"
+      type="button"
+      title="Brush"
+      @click="emit('setActiveTool', 'brush')"
+    >
+      B
+    </button>
     <button
       class="tool-button"
       :class="{ active: activeTool === 'polyline' }"
@@ -68,6 +76,15 @@ const emit = defineEmits<{
       @click="emit('setActiveTool', 'polygon')"
     >
       P
+    </button>
+    <button
+      class="tool-button"
+      :class="{ active: activeTool === 'text' }"
+      type="button"
+      title="Text"
+      @click="emit('setActiveTool', 'text')"
+    >
+      T
     </button>
     <button
       class="tool-button"
