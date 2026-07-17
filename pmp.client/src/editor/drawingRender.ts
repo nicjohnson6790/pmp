@@ -80,6 +80,7 @@ function renderText(context: CanvasRenderingContext2D, shape: ShapeNode) {
   context.translate(baseline.x, baseline.y)
   context.rotate(rotation)
   context.font = `${shape.fontWeight ?? '700'} ${height}px ${shape.fontFamily ?? 'serif'}`
+  context.textAlign = shape.textAlign ?? 'left'
   context.textBaseline = 'alphabetic'
   context.lineWidth = shape.style.strokeWidth
   if (shape.style.stroke) {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PaletteColorResponse } from '../api'
-import type { DrawingStyle, ShapeNode } from '../editor/drawingTypes'
+import type { DrawingStyle, ShapeNode, TextAlign } from '../editor/drawingTypes'
 
 const props = defineProps<{
   activeFill: string
@@ -13,6 +13,7 @@ const emit = defineEmits<{
   setActiveColor: [hex: string]
   updateStyle: [style: Partial<DrawingStyle>]
   updateText: [text: string]
+  updateTextOptions: [options: { fontFamily?: string; fontWeight?: string; textAlign?: TextAlign }]
 }>()
 
 const canFill = computed(() => {
@@ -21,9 +22,7 @@ const canFill = computed(() => {
     : false
 })
 
-const canStroke = computed(() => {
-  return props.selectedShape ? props.selectedShape.shapeType !== 'text' || Boolean(props.selectedShape.style.stroke) : false
-})
+const canStroke = computed(() => Boolean(props.selectedShape))
 
 function updateStrokeWidth(event: Event) {
   const input = event.target as HTMLInputElement
@@ -33,6 +32,28 @@ function updateStrokeWidth(event: Event) {
 function updateText(event: Event) {
   const input = event.target as HTMLInputElement
   emit('updateText', input.value)
+}
+
+function updateFontFamily(event: Event) {
+  const input = event.target as HTMLSelectElement
+  emit('updateTextOptions', { fontFamily: input.value })
+}
+
+function updateFontWeight(event: Event) {
+  const input = event.target as HTMLSelectElement
+  emit('updateTextOptions', { fontWeight: input.value })
+}
+
+function updateTextAlign(event: Event) {
+  const input = event.target as HTMLSelectElement
+  emit('updateTextOptions', { textAlign: input.value as TextAlign })
+}
+
+function toggleTextStroke(event: Event) {
+  const input = event.target as HTMLInputElement
+  emit('updateStyle', {
+    stroke: input.checked ? props.selectedShape?.style.stroke ?? props.selectedShape?.style.fill ?? props.activeFill : undefined,
+  })
 }
 </script>
 
@@ -45,6 +66,42 @@ function updateText(event: Event) {
         Text
         <input :value="selectedShape.text" type="text" @change="updateText" />
       </label>
+
+      <template v-if="selectedShape.shapeType === 'text'">
+        <label>
+          Font
+          <select :value="selectedShape.fontFamily ?? 'serif'" @change="updateFontFamily">
+            <option value="serif">Serif</option>
+            <option value="sans-serif">Sans serif</option>
+            <option value="monospace">Monospace</option>
+            <option value="cursive">Script</option>
+          </select>
+        </label>
+
+        <label>
+          Weight
+          <select :value="selectedShape.fontWeight ?? '700'" @change="updateFontWeight">
+            <option value="400">Regular</option>
+            <option value="600">Semi bold</option>
+            <option value="700">Bold</option>
+            <option value="900">Black</option>
+          </select>
+        </label>
+
+        <label>
+          Alignment
+          <select :value="selectedShape.textAlign ?? 'left'" @change="updateTextAlign">
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+
+        <label class="checkbox-field">
+          <input :checked="Boolean(selectedShape.style.stroke)" type="checkbox" @change="toggleTextStroke" />
+          Stroke text
+        </label>
+      </template>
 
       <label>
         Stroke width

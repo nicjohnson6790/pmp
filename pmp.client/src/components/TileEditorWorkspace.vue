@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { CardDetailResponse, TileDetailResponse } from '../api'
 import { cardsApi, tilesApi } from '../api'
 import DrawingCanvas from './DrawingCanvas.vue'
+import type { CanvasViewport } from './DrawingCanvas.vue'
 import EditorContextPanel from './EditorContextPanel.vue'
 import EditorToolRail from './EditorToolRail.vue'
 import LayerManager from './LayerManager.vue'
@@ -27,7 +28,9 @@ const {
   beginPointShape,
   beginShapeMove,
   canDeleteSelection,
+  canGroupSelection,
   canRedo,
+  canUngroupSelection,
   canUndo,
   deleteSelectedNode,
   document: drawingDocument,
@@ -37,12 +40,18 @@ const {
   finishControlPointDrag,
   finishDraftCircle,
   finishShapeMove,
+  groupSelectedNode,
+  moveNodeTo,
+  moveSelectedIntoPreviousGroup,
+  moveSelectedOutOfGroup,
   isDraftingPointShape,
   redo,
   renameNode,
+  replaceDocument,
   reorderNode,
   selectNode,
   selectedNodeId,
+  selectedNodeMoveState,
   selectedShape,
   setActiveColor,
   setActiveTool,
@@ -53,12 +62,23 @@ const {
   updateDraftPointShape,
   updateSelectedShapeStyle,
   updateSelectedText,
+  updateSelectedTextOptions,
   updateShapeMove,
+  ungroupSelectedNode,
 } = useDrawingDocument(sampleTileDocument)
 
 const tileId = computed(() => Number(route.params.tileId))
 const cardId = computed(() => Number(route.params.cardId))
 const paletteColors = computed(() => card.value?.palette?.colors ?? [])
+const draftStorageKey = computed(() => `pmp.tile-editor-draft.${tileId.value}.${cardId.value}`)
+const draftStatus = ref('Draft not saved yet')
+const viewport = ref<CanvasViewport>({
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+})
+const zoomLabel = computed(() => `${Math.round(viewport.value.zoom * 100)}%`)
+let draftSaveTimer: number | undefined
 
 onMounted(() => {
   loadEditorContext()
@@ -67,7 +87,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleEditorShortcut)
+  if (draftSaveTimer) {
+    window.clearTimeout(draftSaveTimer)
+  }
 })
+
+watch(
+  drawingDocument,
+  () => {
+    scheduleDraftSave()
+  },
+  { deep: true },
+)
 
 async function loadEditorContext() {
   if (!Number.isInteger(tileId.value) || !Number.isInteger(cardId.value)) {
@@ -92,6 +123,7 @@ async function loadEditorContext() {
   if (cardResult.status === 'fulfilled') {
     card.value = cardResult.value
     syncActiveColorFromCard(cardResult.value)
+    loadLocalDraft()
   } else {
     errorMessage.value = errorMessage.value
       ? `${errorMessage.value} The selected card could not be loaded.`
@@ -154,6 +186,66 @@ function handleEditorShortcut(event: KeyboardEvent) {
   }
 }
 
+function updateViewport(nextViewport: CanvasViewport) {
+  viewport.value = {
+    zoom: Math.max(0.35, Math.min(3, nextViewport.zoom)),
+    panX: nextViewport.panX,
+    panY: nextViewport.panY,
+  }
+}
+
+function zoomCanvas(direction: 1 | -1) {
+  updateViewport({
+    ...viewport.value,
+    zoom: viewport.value.zoom * (direction > 0 ? 1.2 : 0.82),
+  })
+}
+
+function resetViewport() {
+  updateViewport({
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+  })
+}
+
+function scheduleDraftSave() {
+  if (!Number.isInteger(tileId.value) || !Number.isInteger(cardId.value)) {
+    return
+  }
+
+  if (draftSaveTimer) {
+    window.clearTimeout(draftSaveTimer)
+  }
+
+  draftStatus.value = 'Saving draft...'
+  draftSaveTimer = window.setTimeout(() => {
+    localStorage.setItem(draftStorageKey.value, JSON.stringify(drawingDocument.value))
+    draftStatus.value = `Draft saved ${new Date().toLocaleTimeString()}`
+  }, 250)
+}
+
+function loadLocalDraft() {
+  const savedDraft = localStorage.getItem(draftStorageKey.value)
+  if (!savedDraft) {
+    draftStatus.value = 'No saved draft for this tile/card'
+    return
+  }
+
+  try {
+    replaceDocument(JSON.parse(savedDraft))
+    draftStatus.value = 'Loaded local draft'
+  } catch {
+    draftStatus.value = 'Saved draft could not be loaded'
+  }
+}
+
+function resetLocalDraft() {
+  localStorage.removeItem(draftStorageKey.value)
+  replaceDocument(sampleTileDocument)
+  draftStatus.value = 'Draft reset'
+}
+
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false
@@ -202,11 +294,15 @@ function isTypingTarget(target: EventTarget | null) {
           :can-undo="canUndo"
           :has-selection="Boolean(selectedNodeId)"
           :is-drafting-point-shape="isDraftingPointShape"
+          :zoom-label="zoomLabel"
           @delete-selection="deleteSelectedNode"
           @finish-draft-point-shape="finishDraftPointShape"
           @redo="redo"
+          @reset-zoom="resetViewport"
           @set-active-tool="setActiveTool"
           @undo="undo"
+          @zoom-in="zoomCanvas(1)"
+          @zoom-out="zoomCanvas(-1)"
         />
 
         <div class="tile-canvas-stage">
@@ -215,6 +311,7 @@ function isTypingTarget(target: EventTarget | null) {
             :document="drawingDocument"
             :is-drafting-point-shape="isDraftingPointShape"
             :selected-node-id="selectedNodeId"
+            :viewport="viewport"
             @add-draft-point="addDraftPoint"
             @begin-brush="beginBrush"
             @begin-circle="beginCircle"
@@ -232,11 +329,16 @@ function isTypingTarget(target: EventTarget | null) {
             @update-shape-move="updateShapeMove"
             @finish-circle="finishDraftCircle"
             @update-brush="updateDraftBrush"
+            @update-viewport="updateViewport"
           />
         </div>
       </section>
 
       <aside class="editor-side-panel">
+        <section class="draft-panel" aria-label="Draft">
+          <span>{{ draftStatus }}</span>
+          <button class="icon-button" type="button" title="Reset local draft" @click="resetLocalDraft">Reset</button>
+        </section>
         <LayerStyleControls
           :active-fill="activeFill"
           :palette-colors="paletteColors"
@@ -244,13 +346,22 @@ function isTypingTarget(target: EventTarget | null) {
           @set-active-color="setActiveColor"
           @update-style="updateSelectedShapeStyle"
           @update-text="updateSelectedText"
+          @update-text-options="updateSelectedTextOptions"
         />
         <LayerManager
+          :can-group-selection="canGroupSelection"
+          :can-ungroup-selection="canUngroupSelection"
           :document="drawingDocument"
           :selected-node-id="selectedNodeId"
+          :selected-node-move-state="selectedNodeMoveState"
+          @group-selection="groupSelectedNode"
+          @move-into-previous-group="moveSelectedIntoPreviousGroup"
+          @move-node-to="moveNodeTo"
+          @move-out-of-group="moveSelectedOutOfGroup"
           @rename="renameNode"
           @reorder="reorderNode"
           @select="selectNode"
+          @ungroup-selection="ungroupSelectedNode"
         />
       </aside>
     </div>

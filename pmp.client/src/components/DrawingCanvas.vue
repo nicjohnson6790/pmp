@@ -3,11 +3,18 @@ import { onMounted, ref, watch } from 'vue'
 import type { DrawingDocument, DrawingTool, Point, ShapeControlPoint } from '../editor/drawingTypes'
 import { getDocumentControlPoints, renderDrawingDocument } from '../editor/drawingRender'
 
+export type CanvasViewport = {
+  zoom: number
+  panX: number
+  panY: number
+}
+
 const props = defineProps<{
   activeTool: DrawingTool
   document: DrawingDocument
   isDraftingPointShape: boolean
   selectedNodeId?: string
+  viewport: CanvasViewport
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +35,7 @@ const emit = defineEmits<{
   beginShapeMove: [startPoint: Point]
   updateShapeMove: [point: Point]
   finishShapeMove: []
+  updateViewport: [viewport: CanvasViewport]
 }>()
 
 const canvas = ref<HTMLCanvasElement>()
@@ -35,6 +43,8 @@ const isDrawing = ref(false)
 const isBrushing = ref(false)
 const isDraggingControlPoint = ref(false)
 const isMovingShape = ref(false)
+const isPanning = ref(false)
+const lastPanPoint = ref<Point>()
 
 onMounted(() => {
   renderCanvas()
@@ -70,6 +80,13 @@ function handlePointerDown(event: PointerEvent) {
   }
 
   const documentPoint = getDocumentPoint(event)
+
+  if (props.activeTool === 'pan') {
+    isPanning.value = true
+    lastPanPoint.value = { x: event.clientX, y: event.clientY }
+    canvas.value?.setPointerCapture(event.pointerId)
+    return
+  }
 
   if (props.activeTool === 'edit') {
     const controlPoint = findControlPointAt(documentPoint)
@@ -136,6 +153,20 @@ function handlePointerMove(event: PointerEvent) {
     return
   }
 
+  if (isPanning.value && lastPanPoint.value) {
+    const delta = {
+      x: event.clientX - lastPanPoint.value.x,
+      y: event.clientY - lastPanPoint.value.y,
+    }
+    emit('updateViewport', {
+      ...props.viewport,
+      panX: props.viewport.panX + delta.x,
+      panY: props.viewport.panY + delta.y,
+    })
+    lastPanPoint.value = { x: event.clientX, y: event.clientY }
+    return
+  }
+
   if ((props.activeTool === 'polyline' || props.activeTool === 'polygon') && props.isDraftingPointShape) {
     emit('updateDraftPointShape', getDocumentPoint(event))
     return
@@ -173,6 +204,13 @@ function handlePointerUp(event: PointerEvent) {
     return
   }
 
+  if (isPanning.value) {
+    isPanning.value = false
+    lastPanPoint.value = undefined
+    canvas.value?.releasePointerCapture(event.pointerId)
+    return
+  }
+
   if (!isDrawing.value) {
     return
   }
@@ -200,6 +238,15 @@ function handleContextMenu(event: MouseEvent) {
   event.preventDefault()
 }
 
+function handleWheel(event: WheelEvent) {
+  event.preventDefault()
+  const nextZoom = clampZoom(props.viewport.zoom * (event.deltaY < 0 ? 1.1 : 0.9))
+  emit('updateViewport', {
+    ...props.viewport,
+    zoom: nextZoom,
+  })
+}
+
 function findControlPointAt(documentPoint: Point): ShapeControlPoint | undefined {
   const hitRadius = 20
   return getDocumentControlPoints(props.document, props.selectedNodeId).find((controlPoint) => {
@@ -219,13 +266,18 @@ function getDocumentPoint(event: PointerEvent): Point {
     y: ((event.clientY - bounds.top) / bounds.height) * props.document.height,
   }
 }
+
+function clampZoom(zoom: number) {
+  return Math.max(0.35, Math.min(3, zoom))
+}
 </script>
 
 <template>
   <canvas
     ref="canvas"
     class="drawing-canvas"
-    :class="{ editing: activeTool === 'edit', moving: activeTool === 'move' }"
+    :class="{ editing: activeTool === 'edit', moving: activeTool === 'move', panning: activeTool === 'pan' }"
+    :style="{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }"
     :width="document.width"
     :height="document.height"
     aria-label="Tile drawing preview"
@@ -235,5 +287,6 @@ function getDocumentPoint(event: PointerEvent): Point {
     @pointercancel="handlePointerUp"
     @dblclick="handleDoubleClick"
     @contextmenu="handleContextMenu"
+    @wheel="handleWheel"
   ></canvas>
 </template>

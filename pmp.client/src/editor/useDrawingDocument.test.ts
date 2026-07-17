@@ -164,9 +164,16 @@ describe('useDrawingDocument', () => {
 
     store.createText({ x: 50, y: 80 })
     store.updateSelectedText('Harbor')
+    store.updateSelectedTextOptions({ fontFamily: 'sans-serif', fontWeight: '400', textAlign: 'center' })
     const textShape = store.document.value.nodes[1] as ShapeNode
     expect(textShape.shapeType).toBe('text')
     expect(textShape.text).toBe('Harbor')
+    expect(textShape.fontFamily).toBe('sans-serif')
+    expect(textShape.fontWeight).toBe('400')
+    expect(textShape.textAlign).toBe('center')
+
+    store.undo()
+    expect((store.document.value.nodes[1] as ShapeNode).textAlign).toBe('left')
 
     store.undo()
     expect((store.document.value.nodes[1] as ShapeNode).text).toBe('Text')
@@ -220,5 +227,80 @@ describe('useDrawingDocument', () => {
       { x: 120, y: 160 },
       { x: 120, y: 88 },
     ])
+  })
+
+  it('groups, ungroups, and moves layers through nested structure with undo support', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        firstShape(circleDocument()),
+        {
+          ...firstShape(circleDocument()),
+          id: 'circle-2',
+          name: 'Circle 2',
+        },
+      ],
+    })
+
+    store.selectNode('circle-1')
+    store.groupSelectedNode()
+
+    expect(store.document.value.nodes[0]?.type).toBe('group')
+    expect(store.canUngroupSelection.value).toBe(true)
+
+    store.selectNode('circle-2')
+    expect(store.selectedNodeMoveState.value.canMoveIntoPreviousGroup).toBe(true)
+    store.moveSelectedIntoPreviousGroup()
+
+    const group = store.document.value.nodes[0]
+    expect(group?.type).toBe('group')
+    expect(group?.type === 'group' ? group.children.map((node) => node.id) : []).toEqual(['circle-1', 'circle-2'])
+
+    store.undo()
+    expect(store.document.value.nodes.map((node) => node.id)).toEqual([store.document.value.nodes[0]!.id, 'circle-2'])
+
+    store.selectNode(store.document.value.nodes[0]!.id)
+    store.ungroupSelectedNode()
+    expect(store.document.value.nodes.map((node) => node.id)).toEqual(['circle-1', 'circle-2'])
+  })
+
+  it('preserves world transform when moving a layer out of a transformed group', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        {
+          id: 'group-1',
+          type: 'group',
+          name: 'Group 1',
+          transform: {
+            x: 80,
+            y: 40,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+          },
+          children: [
+            {
+              ...firstShape(circleDocument()),
+              transform: {
+                x: 12,
+                y: 18,
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1,
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    store.selectNode('circle-1')
+    store.moveSelectedOutOfGroup()
+
+    const movedNode = store.document.value.nodes[1] as ShapeNode
+    expect(movedNode.id).toBe('circle-1')
+    expect(movedNode.transform.x).toBe(92)
+    expect(movedNode.transform.y).toBe(58)
   })
 })

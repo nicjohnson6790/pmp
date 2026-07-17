@@ -25,7 +25,9 @@ Shared drawing foundation is now started on the client. `src/editor` defines the
 
 The tile editor shell is canvas-first. Tile/card context, the active card prompt, palette, and navigation live in a collapsible left context panel so the drawing editor can expand when the panel is collapsed. Palette access is preserved in a compact form when that panel is collapsed. The right editor panel contains selected-layer style controls and a compact layer manager whose layer list owns vertical scrolling.
 
-Next implementation focus: editor usability and deeper layer structure. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions. Add canvas zoom/pan, stronger text controls, true nested drag/drop reorder, group/ungroup, add/remove-layer-from-group interactions, and transform preservation when moving nodes into or out of groups.
+Editor usability and deeper layer structure are now started. The editor has zoom/pan controls, stronger text controls for font family, weight, alignment, and optional stroke, local browser draft persistence, nested drag/drop layer reorder, group/ungroup, move into/out of group actions, and matrix helpers that preserve world transforms when layers move across group boundaries. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions.
+
+Next implementation focus: make nested editing fully transform-aware, then move from local drafts to server-backed edit sessions. Add group move/rotate/resize, convert canvas control-point hit testing and point updates between world/local coordinates when parent groups have transforms, improve multi-selection/grouping affordances, and then add persistent draft save/load endpoints before changed-pixel checks and lock handling.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -211,6 +213,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
   - `text`
   - `fontFamily`
   - `fontWeight`
+  - `textAlign`
   - `baselinePoint`
   - `heightPoint`
   - The baseline point anchors the text. The vector from baseline to height point describes text size and rotation.
@@ -255,10 +258,12 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 8. Keep palette controls accessible when the context panel is collapsed.
 9. Add brush creation.
 10. Add text creation with editable baseline and height/orientation control points.
-11. Group/ungroup.
-12. Drag/drop reorder.
-13. Move nodes into/out of groups with transform preservation.
+11. Group/ungroup. Completed for single selected layers/groups.
+12. Drag/drop reorder. Completed for before/after/inside-group drops.
+13. Move nodes into/out of groups with transform preservation. Completed for structural moves.
 14. Group move/rotate/resize.
+15. Make canvas hit testing and point edits transform-aware for shapes inside transformed groups.
+16. Promote local draft persistence to server-backed edit-session persistence.
 
 ## Phase 5: Tile Model and Tile Browser
 
@@ -360,7 +365,8 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
   - Passes palette colors into shared drawing editor.
   - Lets users rename layers.
   - Lets users change selected-shape stroke width, stroke color, and fill color where applicable.
-  - Lets users add text layers and rotate/size them through baseline and height/orientation control points.
+  - Lets users add text layers, rotate/size them through baseline and height/orientation control points, and edit font family, font weight, alignment, and optional stroke.
+  - Supports local browser draft persistence until server-backed edit sessions are available.
   - Tracks live changed-pixel percentage against the starting image.
   - Blocks manual save/autosave when over limit.
   - Sends only layer-list JSON to the server.

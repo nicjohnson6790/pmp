@@ -15,6 +15,8 @@ export type ShapeType = 'circle' | 'polyline' | 'polygon' | 'brush' | 'text'
 
 export type DrawingTool = ShapeType | 'edit' | 'move' | 'pan'
 
+export type TextAlign = 'left' | 'center' | 'right'
+
 export type ShapeControlPoint = {
   nodeId: string
   pointIndex: number
@@ -38,6 +40,7 @@ export type ShapeNode = {
   text?: string
   fontFamily?: string
   fontWeight?: string
+  textAlign?: TextAlign
 }
 
 export type GroupNode = {
@@ -74,5 +77,5 @@ export function identityTransform(): Transform {
 }
 
 export function cloneDrawingDocument(document: DrawingDocument): DrawingDocument {
-  return structuredClone(document)
+  return JSON.parse(JSON.stringify(document)) as DrawingDocument
 }

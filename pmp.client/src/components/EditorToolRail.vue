@@ -8,14 +8,18 @@ defineProps<{
   canUndo: boolean
   hasSelection: boolean
   isDraftingPointShape: boolean
+  zoomLabel: string
 }>()
 
 const emit = defineEmits<{
   deleteSelection: []
   finishDraftPointShape: []
   redo: []
+  resetZoom: []
   setActiveTool: [tool: DrawingTool]
   undo: []
+  zoomIn: []
+  zoomOut: []
 }>()
 </script>
 
@@ -29,7 +33,7 @@ const emit = defineEmits<{
       :disabled="!hasSelection"
       @click="emit('setActiveTool', 'edit')"
     >
-      E
+      ✣
     </button>
     <button
       class="tool-button"
@@ -39,7 +43,16 @@ const emit = defineEmits<{
       :disabled="!hasSelection"
       @click="emit('setActiveTool', 'move')"
     >
-      M
+      ✥
+    </button>
+    <button
+      class="tool-button"
+      :class="{ active: activeTool === 'pan' }"
+      type="button"
+      title="Pan canvas"
+      @click="emit('setActiveTool', 'pan')"
+    >
+      ✢
     </button>
     <button
       class="tool-button tool-divider"
@@ -48,7 +61,7 @@ const emit = defineEmits<{
       title="Brush"
       @click="emit('setActiveTool', 'brush')"
     >
-      B
+      ◡
     </button>
     <button
       class="tool-button"
@@ -57,7 +70,7 @@ const emit = defineEmits<{
       title="Polyline"
       @click="emit('setActiveTool', 'polyline')"
     >
-      L
+      ╱
     </button>
     <button
       class="tool-button"
@@ -66,7 +79,7 @@ const emit = defineEmits<{
       title="Circle"
       @click="emit('setActiveTool', 'circle')"
     >
-      C
+      ○
     </button>
     <button
       class="tool-button"
@@ -75,7 +88,7 @@ const emit = defineEmits<{
       title="Polygon"
       @click="emit('setActiveTool', 'polygon')"
     >
-      P
+      ◇
     </button>
     <button
       class="tool-button"
@@ -93,13 +106,18 @@ const emit = defineEmits<{
       :disabled="!isDraftingPointShape"
       @click="emit('finishDraftPointShape')"
     >
-      F
+      ✓
     </button>
+    <button class="tool-button tool-divider" type="button" title="Zoom out" @click="emit('zoomOut')">−</button>
+    <button class="tool-button zoom-label" type="button" title="Reset zoom" @click="emit('resetZoom')">
+      {{ zoomLabel }}
+    </button>
+    <button class="tool-button" type="button" title="Zoom in" @click="emit('zoomIn')">+</button>
     <button class="tool-button tool-divider" type="button" title="Undo" :disabled="!canUndo" @click="emit('undo')">
-      U
+      ↶
     </button>
     <button class="tool-button" type="button" title="Redo" :disabled="!canRedo" @click="emit('redo')">
-      R
+      ↷
     </button>
     <button
       class="tool-button"
@@ -108,7 +126,7 @@ const emit = defineEmits<{
       :disabled="!canDeleteSelection"
       @click="emit('deleteSelection')"
     >
-      X
+      ×
     </button>
   </div>
 </template>

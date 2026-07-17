@@ -1,7 +1,21 @@
 import { computed, ref, toRaw } from 'vue'
-import type { DrawingDocument, DrawingStyle, DrawingTool, Point, ShapeControlPoint, ShapeNode } from './drawingTypes'
+import type { DrawingDocument, DrawingStyle, DrawingTool, Point, ShapeControlPoint, ShapeNode, TextAlign } from './drawingTypes'
 import { cloneDrawingDocument, identityTransform } from './drawingTypes'
-import { findDrawingNode, moveDrawingNode, removeDrawingNode, renameDrawingNode, type ReorderDirection } from './drawingTree'
+import {
+  findDrawingNode,
+  getLayerMoveState,
+  groupDrawingNode,
+  isGroupNode,
+  moveDrawingNode,
+  moveDrawingNodeIntoPreviousGroup,
+  moveDrawingNodeOutOfGroup,
+  moveDrawingNodeTo,
+  removeDrawingNode,
+  renameDrawingNode,
+  ungroupDrawingNode,
+  type DropPosition,
+  type ReorderDirection,
+} from './drawingTree'
 
 const minimumCircleRadius = 8
 const historyLimit = 50
@@ -31,6 +45,9 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
   const isDraftingPointShape = computed(() => Boolean(draftPointShapeId.value))
   const selectedShape = computed(() => findSelectedShape())
+  const selectedNodeMoveState = computed(() => getLayerMoveState(document.value, selectedNodeId.value))
+  const canGroupSelection = computed(() => Boolean(selectedNodeId.value))
+  const canUngroupSelection = computed(() => isGroupNode(document.value, selectedNodeId.value))
 
   const selectedToolLabel = computed(() => {
     if (activeTool.value === 'circle') {
@@ -242,6 +259,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
       text: 'Text',
       fontFamily: 'serif',
       fontWeight: '700',
+      textAlign: 'left',
     }
 
     document.value.nodes.push(shape)
@@ -407,6 +425,29 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     }
   }
 
+  function updateSelectedTextOptions(options: { fontFamily?: string; fontWeight?: string; textAlign?: TextAlign }) {
+    const shape = findSelectedShape()
+    if (!shape || shape.shapeType !== 'text') {
+      return
+    }
+
+    const nextFontFamily = options.fontFamily ?? shape.fontFamily
+    const nextFontWeight = options.fontWeight ?? shape.fontWeight
+    const nextTextAlign = options.textAlign ?? shape.textAlign
+    if (
+      shape.fontFamily === nextFontFamily &&
+      shape.fontWeight === nextFontWeight &&
+      shape.textAlign === nextTextAlign
+    ) {
+      return
+    }
+
+    pushHistorySnapshot()
+    shape.fontFamily = nextFontFamily
+    shape.fontWeight = nextFontWeight
+    shape.textAlign = nextTextAlign
+  }
+
   function reorderNode(nodeId: string, direction: ReorderDirection) {
     pushHistorySnapshot()
     const wasMoved = moveDrawingNode(document.value, nodeId, direction)
@@ -416,6 +457,80 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     }
 
     selectedNodeId.value = nodeId
+  }
+
+  function moveNodeTo(nodeId: string, targetNodeId: string, position: DropPosition) {
+    pushHistorySnapshot()
+    const wasMoved = moveDrawingNodeTo(document.value, nodeId, targetNodeId, position)
+    if (!wasMoved) {
+      undoStack.value.pop()
+      return
+    }
+
+    selectedNodeId.value = nodeId
+  }
+
+  function moveSelectedIntoPreviousGroup() {
+    if (!selectedNodeId.value) {
+      return
+    }
+
+    pushHistorySnapshot()
+    const wasMoved = moveDrawingNodeIntoPreviousGroup(document.value, selectedNodeId.value)
+    if (!wasMoved) {
+      undoStack.value.pop()
+    }
+  }
+
+  function moveSelectedOutOfGroup() {
+    if (!selectedNodeId.value) {
+      return
+    }
+
+    pushHistorySnapshot()
+    const wasMoved = moveDrawingNodeOutOfGroup(document.value, selectedNodeId.value)
+    if (!wasMoved) {
+      undoStack.value.pop()
+    }
+  }
+
+  function groupSelectedNode() {
+    if (!selectedNodeId.value) {
+      return
+    }
+
+    pushHistorySnapshot()
+    const groupId = groupDrawingNode(document.value, selectedNodeId.value)
+    if (!groupId) {
+      undoStack.value.pop()
+      return
+    }
+
+    selectedNodeId.value = groupId
+  }
+
+  function ungroupSelectedNode() {
+    if (!selectedNodeId.value) {
+      return
+    }
+
+    pushHistorySnapshot()
+    const childIds = ungroupDrawingNode(document.value, selectedNodeId.value)
+    if (childIds.length === 0) {
+      undoStack.value.pop()
+      return
+    }
+
+    selectedNodeId.value = childIds[0]
+  }
+
+  function replaceDocument(nextDocument: DrawingDocument) {
+    document.value = cloneDrawingDocument(nextDocument)
+    selectedNodeId.value = undefined
+    activeTool.value = 'circle'
+    undoStack.value = []
+    redoStack.value = []
+    clearTransientEditState()
   }
 
   function getDraftCircle() {
@@ -498,11 +613,14 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     activeStroke,
     activeTool,
     canDeleteSelection,
+    canGroupSelection,
     canRedo,
+    canUngroupSelection,
     canUndo,
     document,
     isDraftingPointShape,
     selectedNodeId,
+    selectedNodeMoveState,
     selectedShape,
     selectedToolLabel,
     addDraftPoint,
@@ -518,19 +636,26 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     finishDraftPointShape,
     finishControlPointDrag,
     finishShapeMove,
+    groupSelectedNode,
+    moveNodeTo,
+    moveSelectedIntoPreviousGroup,
+    moveSelectedOutOfGroup,
     redo,
     renameNode,
+    replaceDocument,
     reorderNode,
     selectNode,
     setActiveColor,
     setActiveTool,
     undo,
+    ungroupSelectedNode,
     updateControlPointDrag,
     updateDraftBrush,
     updateDraftCircle,
     updateDraftPointShape,
     updateSelectedShapeStyle,
     updateSelectedText,
+    updateSelectedTextOptions,
     updateShapeMove,
   }
 }

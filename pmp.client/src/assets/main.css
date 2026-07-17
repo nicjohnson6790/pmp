@@ -853,6 +853,7 @@ button:disabled {
   color: var(--color-green-950);
   background: var(--color-surface);
   font-weight: 800;
+  line-height: 1;
 }
 
 .tool-button.active,
@@ -863,6 +864,10 @@ button:disabled {
 
 .tool-button.tool-divider {
   margin-top: 12px;
+}
+
+.tool-button.zoom-label {
+  font-size: 0.62rem;
 }
 
 .tile-canvas-stage {
@@ -899,6 +904,7 @@ button:disabled {
   box-shadow: var(--shadow-panel);
   cursor: crosshair;
   touch-action: none;
+  transform-origin: center;
   user-select: none;
 }
 
@@ -910,16 +916,43 @@ button:disabled {
   cursor: move;
 }
 
+.drawing-canvas.panning {
+  cursor: grab;
+}
+
 .editor-side-panel {
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   flex: 0 0 clamp(220px, 18vw, 280px);
   align-content: stretch;
   gap: 12px;
   height: 100%;
   min-height: 0;
   min-width: 0;
+}
+
+.draft-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.draft-panel span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .layer-style-panel,
@@ -935,6 +968,28 @@ button:disabled {
   grid-template-rows: auto minmax(0, 1fr);
   height: auto;
   overflow-y: hidden;
+}
+
+.layer-manager-header {
+  display: grid;
+  gap: 8px;
+}
+
+.layer-structure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.layer-structure-actions button {
+  min-height: 24px;
+  margin: 0;
+  padding: 0 7px;
+  border-radius: 4px;
+  color: var(--color-green-900);
+  background: var(--color-surface-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .layer-style-panel h2,
@@ -996,6 +1051,21 @@ button:disabled {
   background: var(--color-green-50);
 }
 
+.layer-list-item.drop-before {
+  border-top-color: var(--color-green-700);
+  border-top-width: 3px;
+}
+
+.layer-list-item.drop-after {
+  border-bottom-color: var(--color-green-700);
+  border-bottom-width: 3px;
+}
+
+.layer-list-item.drop-inside {
+  outline: 2px solid rgba(32, 167, 121, 0.42);
+  outline-offset: -2px;
+}
+
 .layer-list-item.group {
   font-weight: 800;
 }
@@ -1052,6 +1122,17 @@ button:disabled {
   font-size: 0.72rem;
   font-weight: 750;
   line-height: 1;
+}
+
+.checkbox-field {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  font-weight: 650;
+}
+
+.checkbox-field input {
+  width: 16px;
+  min-height: 16px;
 }
 
 .layer-collapse-button,
