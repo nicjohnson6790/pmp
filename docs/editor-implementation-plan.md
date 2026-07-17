@@ -23,7 +23,9 @@ Tile editor entry is started on the client. From the tile detail panel, a user c
 
 Shared drawing foundation is now started on the client. `src/editor` defines the first drawing document types, sample document, tree helpers, canvas renderer, and `useDrawingDocument` store/composable. `DrawingCanvas.vue` renders the document, `LayerManager.vue` owns click selection, selected shapes are highlighted on the canvas, and the circle tool can create new top-level circle shapes by dragging on the canvas with a palette-constrained color.
 
-Next implementation focus: layer-manager-driven circle editing. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into move/control-point mode. Selected shapes should show a distinct base control point for moving the whole shape plus normal control points for shape-specific edits. Undo/redo should be implemented as shared editor history for all edit actions.
+The tile editor shell is canvas-first. Tile/card context, the active card prompt, palette, and navigation live in a collapsible left context panel so the drawing editor can expand when the panel is collapsed.
+
+Next implementation focus: layer-manager-driven editor growth. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -176,7 +178,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `src/editor/drawingRender.ts`
   - Draw document to canvas.
   - Flatten render order.
-  - Draw selection/control handles, including a visually distinct base control point for whole-shape movement.
+  - Draw selection/control handles as uniform editable geometry points.
 - `src/editor/drawingHistory.ts`
   - Shared undo/redo stack for all document edit actions.
   - Command or snapshot strategy.
@@ -220,11 +222,13 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `ToolRail.vue`
   - Creation/edit tools such as brush, polyline, circle, polygon, eyedropper, pan/zoom, and transform modes.
   - Selection should be driven from the layer manager rather than a select tool in the tool rail.
-  - A move/control-point editing mode should be automatically activated when a layer is selected.
+  - Control-point edit mode should be automatically activated when a layer is selected.
+  - Whole-shape movement should use a separate move tool.
 - `PaletteSwatches.vue`
   - Displays available copied colors from the active card palette.
 - `DrawingEditorShell.vue`
   - Composes canvas, tools, layer manager, palette, and contextual panels.
+  - Keep card/tile context collapsible so the canvas can use the maximum practical workspace.
 
 ### Build Order
 
@@ -232,7 +236,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 2. Selection from layer manager.
 3. Canvas highlighting for the layer-manager selection.
 4. Create polygon/polyline/brush/circle.
-5. Edit control points for the selected layer item, with a base control point for moving the whole shape.
+5. Edit control points for the selected layer item, with a separate move tool for moving the whole shape.
 6. Shared undo/redo for document mutations.
 7. Group/ungroup.
 8. Drag/drop reorder.
@@ -333,7 +337,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 
 - `TileEditorView.vue`
   - Loads edit session.
-  - Shows card prompt, skip number, hint number, assigned tile coordinate, lock timer.
+  - Shows card prompt, skip number, hint number, assigned tile coordinate, lock timer in a collapsible context panel.
   - Shows starting tile image as bottom visual layer or locked background layer.
   - Passes palette colors into shared drawing editor.
   - Tracks live changed-pixel percentage against the starting image.

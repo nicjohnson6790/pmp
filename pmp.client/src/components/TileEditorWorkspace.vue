@@ -13,11 +13,13 @@ const tile = ref<TileDetailResponse>()
 const card = ref<CardDetailResponse>()
 const isLoading = ref(false)
 const errorMessage = ref('')
+const isContextPanelCollapsed = ref(false)
 const {
   activeFill,
   activeTool,
   beginCircle,
   beginControlPointDrag,
+  beginShapeMove,
   canDeleteSelection,
   canRedo,
   canUndo,
@@ -25,6 +27,7 @@ const {
   document: drawingDocument,
   finishControlPointDrag,
   finishDraftCircle,
+  finishShapeMove,
   redo,
   selectNode,
   selectedNodeId,
@@ -33,6 +36,7 @@ const {
   undo,
   updateControlPointDrag,
   updateDraftCircle,
+  updateShapeMove,
 } = useDrawingDocument(sampleTileDocument)
 
 const tileId = computed(() => Number(route.params.tileId))
@@ -133,8 +137,12 @@ function isTypingTarget(target: EventTarget | null) {
 </script>
 
 <template>
-  <section class="tile-editor-workspace" aria-labelledby="tile-editor-heading">
-    <header class="workspace-header">
+  <section
+    class="tile-editor-workspace"
+    :class="{ 'context-collapsed': isContextPanelCollapsed && tile && card }"
+    aria-labelledby="tile-editor-heading"
+  >
+    <header v-if="!tile || !card" class="workspace-header">
       <div>
         <h1 id="tile-editor-heading">Tile editor</h1>
         <p v-if="tile && card">
@@ -149,24 +157,45 @@ function isTypingTarget(target: EventTarget | null) {
     <div v-if="isLoading" class="empty-state panel-empty">Loading editor...</div>
 
     <div v-else-if="tile && card" class="tile-editor-layout">
-      <aside class="active-card-panel" aria-label="Active card">
-        <div class="card-preview-header">
-          <span>{{ card.actionType }}</span>
-          <span>Skip {{ card.skipNumber }} / Hint {{ card.hintNumber }}</span>
-        </div>
-        <h2>{{ card.title }}</h2>
-        <p>{{ card.prompt }}</p>
-        <div class="palette-strip editor-palette-strip" aria-label="Active palette">
-          <button
-            v-for="color in paletteColors"
-            :key="`${color.id}-${color.hex}`"
-            class="palette-color-button"
-            :class="{ selected: color.hex === activeFill }"
-            type="button"
-            :style="{ background: color.hex }"
-            :title="`${color.name}: ${color.hex}`"
-            @click="color.hex && setActiveColor(color.hex)"
-          ></button>
+      <aside class="editor-context-panel" aria-label="Editor context">
+        <button
+          class="tool-button context-toggle"
+          type="button"
+          :title="isContextPanelCollapsed ? 'Show editor context' : 'Hide editor context'"
+          @click="isContextPanelCollapsed = !isContextPanelCollapsed"
+        >
+          {{ isContextPanelCollapsed ? '>' : '<' }}
+        </button>
+
+        <div v-if="!isContextPanelCollapsed" class="editor-context-content">
+          <header class="editor-context-header">
+            <div>
+              <h1 id="tile-editor-heading">Tile editor</h1>
+              <p>{{ formatCoordinate(tile) }} with {{ card.title }}</p>
+            </div>
+            <RouterLink class="secondary-button route-button" to="/tiles">Back to tiles</RouterLink>
+          </header>
+
+          <section class="active-card-panel" aria-label="Active card">
+            <div class="card-preview-header">
+              <span>{{ card.actionType }}</span>
+              <span>Skip {{ card.skipNumber }} / Hint {{ card.hintNumber }}</span>
+            </div>
+            <h2>{{ card.title }}</h2>
+            <p>{{ card.prompt }}</p>
+            <div class="palette-strip editor-palette-strip" aria-label="Active palette">
+              <button
+                v-for="color in paletteColors"
+                :key="`${color.id}-${color.hex}`"
+                class="palette-color-button"
+                :class="{ selected: color.hex === activeFill }"
+                type="button"
+                :style="{ background: color.hex }"
+                :title="`${color.name}: ${color.hex}`"
+                @click="color.hex && setActiveColor(color.hex)"
+              ></button>
+            </div>
+          </section>
         </div>
       </aside>
 
@@ -182,7 +211,17 @@ function isTypingTarget(target: EventTarget | null) {
           >
             E
           </button>
-          <button class="tool-button" type="button" title="Brush" disabled>B</button>
+          <button
+            class="tool-button"
+            :class="{ active: activeTool === 'move' }"
+            type="button"
+            title="Move selected layer"
+            :disabled="!selectedNodeId"
+            @click="setActiveTool('move')"
+          >
+            M
+          </button>
+          <button class="tool-button tool-divider" type="button" title="Brush" disabled>B</button>
           <button class="tool-button" type="button" title="Polyline" disabled>L</button>
           <button
             class="tool-button"
@@ -218,9 +257,12 @@ function isTypingTarget(target: EventTarget | null) {
             :selected-node-id="selectedNodeId"
             @begin-circle="beginCircle"
             @begin-control-point-drag="beginControlPointDrag"
+            @begin-shape-move="beginShapeMove"
             @finish-control-point-drag="finishControlPointDrag"
+            @finish-shape-move="finishShapeMove"
             @update-circle="updateDraftCircle"
             @update-control-point-drag="updateControlPointDrag"
+            @update-shape-move="updateShapeMove"
             @finish-circle="finishDraftCircle"
           />
         </div>

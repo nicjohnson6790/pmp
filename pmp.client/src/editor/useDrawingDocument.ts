@@ -18,6 +18,9 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     controlPoint: ShapeControlPoint
     lastPoint: Point
   }>()
+  const shapeMoveDrag = ref<{
+    lastPoint: Point
+  }>()
   const undoStack = ref<DrawingDocument[]>([])
   const redoStack = ref<DrawingDocument[]>([])
 
@@ -26,7 +29,15 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
 
   const selectedToolLabel = computed(() => {
-    return activeTool.value === 'circle' ? 'Circle' : activeTool.value === 'edit' ? 'Edit' : activeTool.value
+    if (activeTool.value === 'circle') {
+      return 'Circle'
+    }
+
+    if (activeTool.value === 'edit') {
+      return 'Edit'
+    }
+
+    return activeTool.value === 'move' ? 'Move' : activeTool.value
   })
 
   function selectNode(nodeId: string) {
@@ -118,26 +129,47 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
       return
     }
 
-    if (drag.controlPoint.kind === 'base') {
-      const delta = {
-        x: nextPoint.x - drag.lastPoint.x,
-        y: nextPoint.y - drag.lastPoint.y,
-      }
-
-      shape.points = shape.points.map((point) => ({
-        x: point.x + delta.x,
-        y: point.y + delta.y,
-      }))
-      drag.lastPoint = nextPoint
-      return
-    }
-
     shape.points[drag.controlPoint.pointIndex] =
       shape.shapeType === 'circle' ? constrainCircleRadiusPoint(shape, nextPoint) : nextPoint
   }
 
   function finishControlPointDrag() {
     controlPointDrag.value = undefined
+  }
+
+  function beginShapeMove(startPoint: Point) {
+    const shape = findSelectedShape()
+    if (!shape) {
+      return
+    }
+
+    pushHistorySnapshot()
+    shapeMoveDrag.value = {
+      lastPoint: startPoint,
+    }
+  }
+
+  function updateShapeMove(nextPoint: Point) {
+    const drag = shapeMoveDrag.value
+    const shape = findSelectedShape()
+    if (!drag || !shape) {
+      return
+    }
+
+    const delta = {
+      x: nextPoint.x - drag.lastPoint.x,
+      y: nextPoint.y - drag.lastPoint.y,
+    }
+
+    shape.points = shape.points.map((point) => ({
+      x: point.x + delta.x,
+      y: point.y + delta.y,
+    }))
+    drag.lastPoint = nextPoint
+  }
+
+  function finishShapeMove() {
+    shapeMoveDrag.value = undefined
   }
 
   function undo() {
@@ -229,6 +261,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   function clearTransientEditState() {
     draftShapeId.value = undefined
     controlPointDrag.value = undefined
+    shapeMoveDrag.value = undefined
   }
 
   return {
@@ -243,9 +276,11 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     selectedToolLabel,
     beginCircle,
     beginControlPointDrag,
+    beginShapeMove,
     deleteSelectedNode,
     finishDraftCircle,
     finishControlPointDrag,
+    finishShapeMove,
     redo,
     selectNode,
     setActiveColor,
@@ -253,5 +288,6 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     undo,
     updateControlPointDrag,
     updateDraftCircle,
+    updateShapeMove,
   }
 }
