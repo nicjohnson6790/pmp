@@ -12,6 +12,13 @@ export type LayerMoveState = {
   canMoveOutOfGroup: boolean
 }
 
+export type DrawingNodeLocation = {
+  node: DrawingNode
+  siblings: DrawingNode[]
+  index: number
+  parents: DrawingNode[]
+}
+
 export function flattenDrawingNodes(document: DrawingDocument): FlattenedDrawingNode[] {
   return flattenNodes(document.nodes, 0)
 }
@@ -191,6 +198,13 @@ export function isGroupNode(document: DrawingDocument, nodeId: string | undefine
   return node?.type === 'group'
 }
 
+export function findDrawingNodeLocation(
+  document: DrawingDocument,
+  nodeId: string | undefined,
+): DrawingNodeLocation | undefined {
+  return findNodeLocation(document.nodes, nodeId)
+}
+
 function flattenNodes(nodes: DrawingNode[], depth: number): FlattenedDrawingNode[] {
   return nodes.flatMap((node) => {
     const current = { node, depth }
@@ -256,14 +270,7 @@ function findNodeLocation(
   nodes: DrawingNode[],
   nodeId: string | undefined,
   parents: DrawingNode[] = [],
-):
-  | {
-      node: DrawingNode
-      siblings: DrawingNode[]
-      index: number
-      parents: DrawingNode[]
-    }
-  | undefined {
+): DrawingNodeLocation | undefined {
   if (!nodeId) {
     return undefined
   }

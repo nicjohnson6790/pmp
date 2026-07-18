@@ -1,7 +1,8 @@
 import { computed, ref, toRaw } from 'vue'
-import type { DrawingDocument, DrawingStyle, DrawingTool, Point, ShapeControlPoint, ShapeNode, TextAlign } from './drawingTypes'
+import type { DrawingDocument, DrawingStyle, DrawingTool, Point, ShapeControlPoint, ShapeNode, TextAlign, Transform } from './drawingTypes'
 import { cloneDrawingDocument, identityTransform } from './drawingTypes'
 import {
+  findDrawingNodeLocation,
   findDrawingNode,
   getLayerMoveState,
   groupDrawingNode,
@@ -16,6 +17,7 @@ import {
   type DropPosition,
   type ReorderDirection,
 } from './drawingTree'
+import { applyMatrixToPoint, getNodeWorldMatrix, identityMatrix, invertMatrix, multiplyMatrices, nodeToMatrix } from './drawingTransforms'
 
 const minimumCircleRadius = 8
 const historyLimit = 50
@@ -37,6 +39,9 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const shapeMoveDrag = ref<{
     lastPoint: Point
   }>()
+  const groupMoveDrag = ref<{
+    lastPoint: Point
+  }>()
   const undoStack = ref<DrawingDocument[]>([])
   const redoStack = ref<DrawingDocument[]>([])
 
@@ -45,6 +50,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   const canDeleteSelection = computed(() => Boolean(selectedNodeId.value))
   const isDraftingPointShape = computed(() => Boolean(draftPointShapeId.value))
   const selectedShape = computed(() => findSelectedShape())
+  const selectedNode = computed(() => findDrawingNode(document.value, selectedNodeId.value))
   const selectedNodeMoveState = computed(() => getLayerMoveState(document.value, selectedNodeId.value))
   const canGroupSelection = computed(() => Boolean(selectedNodeId.value))
   const canUngroupSelection = computed(() => isGroupNode(document.value, selectedNodeId.value))
@@ -295,8 +301,13 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
       return
     }
 
+    const localPoint = getLocalPointForNode(shape.id, nextPoint)
+    if (!localPoint) {
+      return
+    }
+
     shape.points[drag.controlPoint.pointIndex] =
-      shape.shapeType === 'circle' ? constrainCircleRadiusPoint(shape, nextPoint) : nextPoint
+      shape.shapeType === 'circle' ? constrainCircleRadiusPoint(shape, localPoint) : localPoint
   }
 
   function finishControlPointDrag() {
@@ -304,27 +315,40 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
   }
 
   function beginShapeMove(startPoint: Point) {
-    const shape = findSelectedShape()
-    if (!shape) {
+    const node = findDrawingNode(document.value, selectedNodeId.value)
+    if (!node) {
       return
     }
 
     pushHistorySnapshot()
-    shapeMoveDrag.value = {
-      lastPoint: startPoint,
+    if (node.type === 'group') {
+      groupMoveDrag.value = { lastPoint: startPoint }
+    } else {
+      shapeMoveDrag.value = { lastPoint: startPoint }
     }
   }
 
   function updateShapeMove(nextPoint: Point) {
+    if (groupMoveDrag.value) {
+      updateGroupMove(nextPoint)
+      return
+    }
+
     const drag = shapeMoveDrag.value
     const shape = findSelectedShape()
     if (!drag || !shape) {
       return
     }
 
+    const previousPoint = getLocalPointForNode(shape.id, drag.lastPoint)
+    const nextLocalPoint = getLocalPointForNode(shape.id, nextPoint)
+    if (!previousPoint || !nextLocalPoint) {
+      return
+    }
+
     const delta = {
-      x: nextPoint.x - drag.lastPoint.x,
-      y: nextPoint.y - drag.lastPoint.y,
+      x: nextLocalPoint.x - previousPoint.x,
+      y: nextLocalPoint.y - previousPoint.y,
     }
 
     shape.points = shape.points.map((point) => ({
@@ -336,6 +360,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
 
   function finishShapeMove() {
     shapeMoveDrag.value = undefined
+    groupMoveDrag.value = undefined
   }
 
   function undo() {
@@ -446,6 +471,24 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     shape.fontFamily = nextFontFamily
     shape.fontWeight = nextFontWeight
     shape.textAlign = nextTextAlign
+  }
+
+  function updateSelectedGroupTransform(transform: Partial<Transform>) {
+    const node = findDrawingNode(document.value, selectedNodeId.value)
+    if (!node || node.type !== 'group') {
+      return
+    }
+
+    const nextTransform = normalizeTransform({
+      ...node.transform,
+      ...transform,
+    })
+    if (JSON.stringify(node.transform) === JSON.stringify(nextTransform)) {
+      return
+    }
+
+    pushHistorySnapshot()
+    node.transform = nextTransform
   }
 
   function reorderNode(nodeId: string, direction: ReorderDirection) {
@@ -587,6 +630,50 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     return node?.type === 'shape' ? node : undefined
   }
 
+  function updateGroupMove(nextPoint: Point) {
+    const drag = groupMoveDrag.value
+    const node = findDrawingNode(document.value, selectedNodeId.value)
+    const location = findDrawingNodeLocation(document.value, selectedNodeId.value)
+    if (!drag || !node || node.type !== 'group' || !location) {
+      return
+    }
+
+    const parentWorldMatrix = location.parents.reduce(
+      (matrix, parent) => multiplyMatrices(matrix, nodeToMatrix(parent)),
+      identityMatrix,
+    )
+    const inverseParentMatrix = invertMatrix(parentWorldMatrix)
+    const previousPoint = applyMatrixToPoint(inverseParentMatrix, drag.lastPoint)
+    const nextLocalPoint = applyMatrixToPoint(inverseParentMatrix, nextPoint)
+
+    node.transform.x += nextLocalPoint.x - previousPoint.x
+    node.transform.y += nextLocalPoint.y - previousPoint.y
+    drag.lastPoint = nextPoint
+  }
+
+  function getLocalPointForNode(nodeId: string, worldPoint: Point): Point | undefined {
+    const location = findDrawingNodeLocation(document.value, nodeId)
+    if (!location) {
+      return undefined
+    }
+
+    return applyMatrixToPoint(invertMatrix(getNodeWorldMatrix(location.node, location.parents)), worldPoint)
+  }
+
+  function normalizeTransform(transform: Transform): Transform {
+    return {
+      x: roundTransformNumber(transform.x),
+      y: roundTransformNumber(transform.y),
+      rotation: roundTransformNumber(transform.rotation),
+      scaleX: Math.max(0.05, roundTransformNumber(transform.scaleX)),
+      scaleY: Math.max(0.05, roundTransformNumber(transform.scaleY)),
+    }
+  }
+
+  function roundTransformNumber(value: number) {
+    return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : 0
+  }
+
   function pushHistorySnapshot() {
     undoStack.value.push(cloneCurrentDocument())
     if (undoStack.value.length > historyLimit) {
@@ -605,6 +692,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     draftPointShapeId.value = undefined
     draftBrushShapeId.value = undefined
     controlPointDrag.value = undefined
+    groupMoveDrag.value = undefined
     shapeMoveDrag.value = undefined
   }
 
@@ -620,6 +708,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     document,
     isDraftingPointShape,
     selectedNodeId,
+    selectedNode,
     selectedNodeMoveState,
     selectedShape,
     selectedToolLabel,
@@ -654,6 +743,7 @@ export function useDrawingDocument(initialDocument: DrawingDocument) {
     updateDraftCircle,
     updateDraftPointShape,
     updateSelectedShapeStyle,
+    updateSelectedGroupTransform,
     updateSelectedText,
     updateSelectedTextOptions,
     updateShapeMove,

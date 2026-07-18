@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DrawingDocument, ShapeNode } from './drawingTypes'
 import { identityTransform } from './drawingTypes'
+import { applyMatrixToPoint, getNodeTransformOrigin, getNodeWorldMatrix } from './drawingTransforms'
 import { useDrawingDocument } from './useDrawingDocument'
 
 function emptyDocument(): DrawingDocument {
@@ -94,6 +95,7 @@ describe('useDrawingDocument', () => {
         nodeId: 'circle-1',
         pointIndex: 1,
         point: { x: 140, y: 100 },
+        localPoint: { x: 140, y: 100 },
       },
       { x: 140, y: 100 },
     )
@@ -302,5 +304,105 @@ describe('useDrawingDocument', () => {
     expect(movedNode.id).toBe('circle-1')
     expect(movedNode.transform.x).toBe(92)
     expect(movedNode.transform.y).toBe(58)
+  })
+
+  it('moves a selected group by updating its transform', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        {
+          id: 'group-1',
+          type: 'group',
+          name: 'Group 1',
+          transform: identityTransform(),
+          children: [firstShape(circleDocument())],
+        },
+      ],
+    })
+
+    store.selectNode('group-1')
+    store.beginShapeMove({ x: 10, y: 20 })
+    store.updateShapeMove({ x: 40, y: 55 })
+    store.finishShapeMove()
+
+    const group = store.document.value.nodes[0]
+    expect(group?.type).toBe('group')
+    expect(group?.transform.x).toBe(30)
+    expect(group?.transform.y).toBe(35)
+
+    store.undo()
+    expect(store.document.value.nodes[0]?.transform).toEqual(identityTransform())
+  })
+
+  it('edits nested shape control points in local coordinates', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        {
+          id: 'group-1',
+          type: 'group',
+          name: 'Group 1',
+          transform: {
+            x: 80,
+            y: 40,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+          },
+          children: [firstShape(circleDocument())],
+        },
+      ],
+    })
+
+    store.selectNode('circle-1')
+    store.beginControlPointDrag(
+      {
+        nodeId: 'circle-1',
+        pointIndex: 1,
+        point: { x: 220, y: 140 },
+        localPoint: { x: 140, y: 100 },
+      },
+      { x: 220, y: 140 },
+    )
+    store.updateControlPointDrag({ x: 260, y: 150 })
+    store.finishControlPointDrag()
+
+    const group = store.document.value.nodes[0]
+    expect(group?.type).toBe('group')
+    const shape = group?.type === 'group' ? (group.children[0] as ShapeNode) : undefined
+    expect(shape?.points[1]).toEqual({ x: 180, y: 110 })
+  })
+
+  it('rotates groups around their content center', () => {
+    const store = useDrawingDocument({
+      ...emptyDocument(),
+      nodes: [
+        {
+          id: 'group-1',
+          type: 'group',
+          name: 'Group 1',
+          transform: {
+            x: 30,
+            y: 20,
+            rotation: Math.PI / 2,
+            scaleX: 1,
+            scaleY: 1,
+          },
+          children: [firstShape(circleDocument())],
+        },
+      ],
+    })
+
+    const group = store.document.value.nodes[0]
+    expect(group?.type).toBe('group')
+    if (group?.type !== 'group') {
+      return
+    }
+
+    const center = getNodeTransformOrigin(group)
+    const worldCenter = applyMatrixToPoint(getNodeWorldMatrix(group), center)
+
+    expect(Math.round(worldCenter.x)).toBe(Math.round(center.x + group.transform.x))
+    expect(Math.round(worldCenter.y)).toBe(Math.round(center.y + group.transform.y))
   })
 })

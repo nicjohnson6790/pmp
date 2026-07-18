@@ -27,7 +27,9 @@ The tile editor shell is canvas-first. Tile/card context, the active card prompt
 
 Editor usability and deeper layer structure are now started. The editor has zoom/pan controls, stronger text controls for font family, weight, alignment, and optional stroke, local browser draft persistence, nested drag/drop layer reorder, group/ungroup, move into/out of group actions, and matrix helpers that preserve world transforms when layers move across group boundaries. Selection should remain layer-manager-only; selecting a layer should automatically put the editor into control-point edit mode. Selected shapes should show uniform editable control points, while whole-shape movement should happen through a dedicated move tool. Undo/redo should remain shared editor history for all edit actions.
 
-Next implementation focus: make nested editing fully transform-aware, then move from local drafts to server-backed edit sessions. Add group move/rotate/resize, convert canvas control-point hit testing and point updates between world/local coordinates when parent groups have transforms, improve multi-selection/grouping affordances, and then add persistent draft save/load endpoints before changed-pixel checks and lock handling.
+Group transform editing and transform-aware nested shape editing are now implemented for the client prototype. Selected groups can move through the move tool and expose X/Y/rotation/scale controls in the style panel. Group rotation and scale pivot around the group's content center. Selection visuals now rely on control handles instead of dotted bounding boxes, and the tile canvas stage includes a `100ft` scale guide anchored to the lower-right of the visible stage.
+
+Next implementation focus: add direct canvas handles for group rotate/scale, improve layer affordances, then move from local drafts to server-backed edit sessions. After edit sessions exist, add persistent draft save/load endpoints before changed-pixel checks and lock handling.
 
 ## Phase 1: Shared Domain Conventions
 
@@ -175,6 +177,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 - `src/editor/drawingTransforms.ts`
   - Matrix helpers.
   - World/local coordinate conversion.
+  - Content-center transform origins for groups.
   - Bake parent transform into child.
   - Apply inverse parent transform when moving into a group.
 - `src/editor/drawingRender.ts`
@@ -240,6 +243,7 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
   - Remains available in compact form when the left editor context panel is collapsed.
 - `LayerStyleControls.vue`
   - Edits the selected shape's stroke width, stroke color, and fill color where applicable.
+  - Edits selected group X/Y/rotation/scale transforms.
   - Uses only colors from the active card palette.
   - Sends changes through the editor store so style edits are undoable.
 - `DrawingEditorShell.vue`
@@ -261,9 +265,10 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
 11. Group/ungroup. Completed for single selected layers/groups.
 12. Drag/drop reorder. Completed for before/after/inside-group drops.
 13. Move nodes into/out of groups with transform preservation. Completed for structural moves.
-14. Group move/rotate/resize.
-15. Make canvas hit testing and point edits transform-aware for shapes inside transformed groups.
+14. Group move/rotate/resize. Completed through move tool translation and style-panel transform fields.
+15. Make canvas hit testing and point edits transform-aware for shapes inside transformed groups. Completed for selected shape control points.
 16. Promote local draft persistence to server-backed edit-session persistence.
+17. Add direct canvas handles for group rotate/scale.
 
 ## Phase 5: Tile Model and Tile Browser
 
@@ -365,7 +370,9 @@ Build this as reusable TypeScript logic before tying it deeply to tile APIs.
   - Passes palette colors into shared drawing editor.
   - Lets users rename layers.
   - Lets users change selected-shape stroke width, stroke color, and fill color where applicable.
+  - Lets users edit selected group transforms and move selected groups through the move tool.
   - Lets users add text layers, rotate/size them through baseline and height/orientation control points, and edit font family, font weight, alignment, and optional stroke.
+  - Shows a `100ft` stage-anchored scale guide whose width tracks editor zoom.
   - Supports local browser draft persistence until server-backed edit sessions are available.
   - Tracks live changed-pixel percentage against the starting image.
   - Blocks manual save/autosave when over limit.

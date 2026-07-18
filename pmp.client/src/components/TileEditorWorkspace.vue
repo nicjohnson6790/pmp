@@ -51,6 +51,7 @@ const {
   reorderNode,
   selectNode,
   selectedNodeId,
+  selectedNode,
   selectedNodeMoveState,
   selectedShape,
   setActiveColor,
@@ -61,6 +62,7 @@ const {
   updateDraftCircle,
   updateDraftPointShape,
   updateSelectedShapeStyle,
+  updateSelectedGroupTransform,
   updateSelectedText,
   updateSelectedTextOptions,
   updateShapeMove,
@@ -78,6 +80,7 @@ const viewport = ref<CanvasViewport>({
   panY: 0,
 })
 const zoomLabel = computed(() => `${Math.round(viewport.value.zoom * 100)}%`)
+const scaleGuideWidth = computed(() => `${(100 / sampleTileDocument.width) * 100 * viewport.value.zoom}%`)
 let draftSaveTimer: number | undefined
 
 onMounted(() => {
@@ -331,6 +334,9 @@ function isTypingTarget(target: EventTarget | null) {
             @update-brush="updateDraftBrush"
             @update-viewport="updateViewport"
           />
+          <div class="canvas-scale-guide" aria-label="100 foot scale" :style="{ width: scaleGuideWidth }">
+            <span>100ft</span>
+          </div>
         </div>
       </section>
 
@@ -342,8 +348,10 @@ function isTypingTarget(target: EventTarget | null) {
         <LayerStyleControls
           :active-fill="activeFill"
           :palette-colors="paletteColors"
+          :selected-node="selectedNode"
           :selected-shape="selectedShape"
           @set-active-color="setActiveColor"
+          @update-group-transform="updateSelectedGroupTransform"
           @update-style="updateSelectedShapeStyle"
           @update-text="updateSelectedText"
           @update-text-options="updateSelectedTextOptions"

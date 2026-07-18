@@ -273,20 +273,24 @@ function clampZoom(zoom: number) {
 </script>
 
 <template>
-  <canvas
-    ref="canvas"
-    class="drawing-canvas"
+  <div
+    class="drawing-canvas-frame"
     :class="{ editing: activeTool === 'edit', moving: activeTool === 'move', panning: activeTool === 'pan' }"
     :style="{ transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})` }"
-    :width="document.width"
-    :height="document.height"
-    aria-label="Tile drawing preview"
-    @pointerdown="handlePointerDown"
-    @pointermove="handlePointerMove"
-    @pointerup="handlePointerUp"
-    @pointercancel="handlePointerUp"
-    @dblclick="handleDoubleClick"
-    @contextmenu="handleContextMenu"
-    @wheel="handleWheel"
-  ></canvas>
+  >
+    <canvas
+      ref="canvas"
+      class="drawing-canvas"
+      :width="document.width"
+      :height="document.height"
+      aria-label="Tile drawing preview"
+      @pointerdown="handlePointerDown"
+      @pointermove="handlePointerMove"
+      @pointerup="handlePointerUp"
+      @pointercancel="handlePointerUp"
+      @dblclick="handleDoubleClick"
+      @contextmenu="handleContextMenu"
+      @wheel="handleWheel"
+    ></canvas>
+  </div>
 </template>

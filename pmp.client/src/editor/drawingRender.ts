@@ -1,5 +1,6 @@
-import type { DrawingDocument, DrawingNode, ShapeControlPoint, ShapeNode, Transform } from './drawingTypes'
-import { findDrawingNode } from './drawingTree'
+import type { DrawingDocument, DrawingNode, ShapeControlPoint, ShapeNode } from './drawingTypes'
+import { findDrawingNodeLocation } from './drawingTree'
+import { applyMatrixToPoint, getNodeWorldMatrix, nodeToMatrix } from './drawingTransforms'
 
 const selectionColor = '#16845F'
 
@@ -13,23 +14,22 @@ export function renderDrawingDocument(
   context.fillRect(0, 0, document.width, document.height)
 
   for (const node of document.nodes) {
-    renderNode(context, node, selectedNodeId)
+    renderNode(context, node)
   }
+
+  drawDocumentSelection(context, document, selectedNodeId)
 }
 
-function renderNode(context: CanvasRenderingContext2D, node: DrawingNode, selectedNodeId?: string) {
+function renderNode(context: CanvasRenderingContext2D, node: DrawingNode) {
   context.save()
-  applyTransform(context, node.transform)
+  applyMatrix(context, nodeToMatrix(node))
 
   if (node.type === 'group') {
     for (const child of node.children) {
-      renderNode(context, child, selectedNodeId)
+      renderNode(context, child)
     }
   } else {
     renderShape(context, node)
-    if (node.id === selectedNodeId) {
-      drawShapeSelection(context, node)
-    }
   }
 
   context.restore()
@@ -124,20 +124,13 @@ function drawCirclePath(context: CanvasRenderingContext2D, shape: ShapeNode) {
   context.arc(center.x, center.y, radius, 0, Math.PI * 2)
 }
 
-function drawShapeSelection(context: CanvasRenderingContext2D, shape: ShapeNode) {
-  const bounds = getShapeBounds(shape)
-  if (!bounds) {
+function drawDocumentSelection(context: CanvasRenderingContext2D, document: DrawingDocument, selectedNodeId?: string) {
+  const location = findDrawingNodeLocation(document, selectedNodeId)
+  if (!location) {
     return
   }
 
-  context.save()
-  context.setLineDash([18, 10])
-  context.lineWidth = 5
-  context.strokeStyle = selectionColor
-  context.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height)
-  context.restore()
-
-  for (const controlPoint of getShapeControlPoints(shape)) {
+  for (const controlPoint of getDocumentControlPoints(document, selectedNodeId)) {
     context.beginPath()
     context.fillStyle = '#FFFFFF'
     context.strokeStyle = selectionColor
@@ -149,12 +142,16 @@ function drawShapeSelection(context: CanvasRenderingContext2D, shape: ShapeNode)
 }
 
 export function getDocumentControlPoints(document: DrawingDocument, selectedNodeId?: string): ShapeControlPoint[] {
-  const node = findDrawingNode(document, selectedNodeId)
-  if (!node || node.type !== 'shape') {
+  const location = findDrawingNodeLocation(document, selectedNodeId)
+  if (!location || location.node.type !== 'shape') {
     return []
   }
 
-  return getShapeControlPoints(node)
+  const worldMatrix = getNodeWorldMatrix(location.node, location.parents)
+  return getShapeControlPoints(location.node).map((controlPoint) => ({
+    ...controlPoint,
+    point: applyMatrixToPoint(worldMatrix, controlPoint.localPoint),
+  }))
 }
 
 function getShapeControlPoints(shape: ShapeNode): ShapeControlPoint[] {
@@ -162,65 +159,10 @@ function getShapeControlPoints(shape: ShapeNode): ShapeControlPoint[] {
     nodeId: shape.id,
     pointIndex: index,
     point,
+    localPoint: point,
   }))
 }
 
-function getShapeBounds(shape: ShapeNode) {
-  if (shape.points.length === 0) {
-    return undefined
-  }
-
-  if (shape.shapeType === 'circle') {
-    const center = shape.points[0]
-    const radiusPoint = shape.points[1]
-    if (!center || !radiusPoint) {
-      return undefined
-    }
-
-    const radius = Math.hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-    return {
-      x: center.x - radius,
-      y: center.y - radius,
-      width: radius * 2,
-      height: radius * 2,
-    }
-  }
-
-  if (shape.shapeType === 'text') {
-    const baseline = shape.points[0]
-    const heightPoint = shape.points[1]
-    if (!baseline || !heightPoint) {
-      return undefined
-    }
-
-    const height = Math.max(12, Math.hypot(heightPoint.x - baseline.x, heightPoint.y - baseline.y))
-    const width = Math.max(height * 2, (shape.text?.length ?? 1) * height * 0.55)
-    return {
-      x: baseline.x - height,
-      y: baseline.y - height - 12,
-      width: width + height * 2,
-      height: height * 2,
-    }
-  }
-
-  const xValues = shape.points.map((point) => point.x)
-  const yValues = shape.points.map((point) => point.y)
-  const minX = Math.min(...xValues)
-  const maxX = Math.max(...xValues)
-  const minY = Math.min(...yValues)
-  const maxY = Math.max(...yValues)
-
-  const padding = Math.max(shape.style.strokeWidth / 2, 12)
-  return {
-    x: minX - padding,
-    y: minY - padding,
-    width: maxX - minX + padding * 2,
-    height: maxY - minY + padding * 2,
-  }
-}
-
-function applyTransform(context: CanvasRenderingContext2D, transform: Transform) {
-  context.translate(transform.x, transform.y)
-  context.rotate(transform.rotation)
-  context.scale(transform.scaleX, transform.scaleY)
+function applyMatrix(context: CanvasRenderingContext2D, matrix: ReturnType<typeof nodeToMatrix>) {
+  context.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f)
 }

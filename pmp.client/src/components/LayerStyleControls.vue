@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PaletteColorResponse } from '../api'
-import type { DrawingStyle, ShapeNode, TextAlign } from '../editor/drawingTypes'
+import type { DrawingNode, DrawingStyle, ShapeNode, TextAlign, Transform } from '../editor/drawingTypes'
 
 const props = defineProps<{
   activeFill: string
   paletteColors: PaletteColorResponse[]
+  selectedNode?: DrawingNode
   selectedShape?: ShapeNode
 }>()
 
 const emit = defineEmits<{
   setActiveColor: [hex: string]
   updateStyle: [style: Partial<DrawingStyle>]
+  updateGroupTransform: [transform: Partial<Transform>]
   updateText: [text: string]
   updateTextOptions: [options: { fontFamily?: string; fontWeight?: string; textAlign?: TextAlign }]
 }>()
+
+const selectedGroup = computed(() => (props.selectedNode?.type === 'group' ? props.selectedNode : undefined))
 
 const canFill = computed(() => {
   return props.selectedShape
@@ -55,13 +59,80 @@ function toggleTextStroke(event: Event) {
     stroke: input.checked ? props.selectedShape?.style.stroke ?? props.selectedShape?.style.fill ?? props.activeFill : undefined,
   })
 }
+
+function updateGroupTransformNumber(key: keyof Transform, event: Event) {
+  const input = event.target as HTMLInputElement
+  const value = Number(input.value)
+  emit('updateGroupTransform', {
+    [key]: key === 'rotation' ? degreesToRadians(value) : value,
+  })
+}
+
+function radiansToDegrees(value: number) {
+  return Math.round((value * 180) / Math.PI)
+}
+
+function degreesToRadians(value: number) {
+  return (value * Math.PI) / 180
+}
 </script>
 
 <template>
   <section class="layer-style-panel" aria-label="Layer style">
     <h2>Style</h2>
-    <div v-if="!selectedShape" class="empty-state compact">Select a layer.</div>
-    <template v-else>
+    <div v-if="!selectedNode" class="empty-state compact">Select a layer.</div>
+    <template v-else-if="selectedGroup">
+      <div class="transform-grid" aria-label="Group transform">
+        <label>
+          X
+          <input
+            :value="selectedGroup.transform.x"
+            step="1"
+            type="number"
+            @change="updateGroupTransformNumber('x', $event)"
+          />
+        </label>
+        <label>
+          Y
+          <input
+            :value="selectedGroup.transform.y"
+            step="1"
+            type="number"
+            @change="updateGroupTransformNumber('y', $event)"
+          />
+        </label>
+        <label>
+          Rotate
+          <input
+            :value="radiansToDegrees(selectedGroup.transform.rotation)"
+            step="1"
+            type="number"
+            @change="updateGroupTransformNumber('rotation', $event)"
+          />
+        </label>
+        <label>
+          Scale X
+          <input
+            :value="selectedGroup.transform.scaleX"
+            min="0.05"
+            step="0.05"
+            type="number"
+            @change="updateGroupTransformNumber('scaleX', $event)"
+          />
+        </label>
+        <label>
+          Scale Y
+          <input
+            :value="selectedGroup.transform.scaleY"
+            min="0.05"
+            step="0.05"
+            type="number"
+            @change="updateGroupTransformNumber('scaleY', $event)"
+          />
+        </label>
+      </div>
+    </template>
+    <template v-else-if="selectedShape">
       <label v-if="selectedShape.shapeType === 'text'">
         Text
         <input :value="selectedShape.text" type="text" @change="updateText" />

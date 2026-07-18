@@ -11,10 +11,12 @@ This is a handoff note for continuing the tile/editor work.
 - Recent local editor work after those commits extracted editor UI boundaries, added store tests, and added point-based polyline/polygon creation.
 - The next editor growth slice is now implemented locally: undoable layer renaming, selected-shape style controls, collapsed-panel palette access, undoable same-level layer reorder, brush creation, and first-pass text creation/editing with baseline/height control points.
 - The editor usability/layer-structure slice is now implemented locally: canvas zoom/pan, icon-style tool controls, disabled layer reorder states, stronger text controls, nested drag/drop reorder, group/ungroup, move into/out of group, transform preservation for structural moves, and local draft persistence.
+- The next transform usability slice is now implemented locally: selected groups can be moved with the move tool, group transforms can be edited from the style panel, nested shape control-point edits are world/local transform-aware, group rotation/scale pivots around the group's content center, selection bounding boxes were removed in favor of control handles, and the canvas stage shows a `100ft` scale guide.
 - `AddTiles` has been applied to the local `pmp.AppDb` database.
 - `npm run test` and `npm run build` passed after the polyline/polygon and editor extraction work.
 - `npm run test` and `npm run build` passed after the layer rename/style/reorder/brush/text work.
 - `npm run test` and `npm run build` passed after the zoom/pan, nested layer structure, text control, and local draft persistence work.
+- `npm run test` and `npm run build` passed after the group transform, center-pivot rotation, selection handle, and stage scale guide work.
 - `dotnet build pmp.slnx` passed after the tile API work. NSwag generation emits the existing `wwwroot` warning but succeeds.
 
 ## Implemented
@@ -39,13 +41,14 @@ This is a handoff note for continuing the tile/editor work.
   - Extracted collapsible editor context panel for tile/card context, navigation, active card, and palette.
 - `pmp.client/src/editor` contains:
   - `drawingTypes.ts` with the first `DrawingDocument`, group, shape, transform, point, and style types.
-  - `drawingTransforms.ts` with matrix helpers for converting between local and world transforms during structural layer moves.
+  - `drawingTransforms.ts` with matrix helpers for converting between local and world transforms during structural layer moves and transform-aware nested editing. Group transform matrices use the group's content bounds center as the pivot.
   - `drawingTree.ts` with flatten/find helpers plus nested reorder, group/ungroup, move into/out of group, and transform-preserving tree operations.
   - `drawingRender.ts` with a canvas renderer for circle, polyline, polygon, and brush shapes.
   - `sampleDrawingDocument.ts` with a hardcoded tile document.
   - `useDrawingDocument.ts` with the first editor store/composable for document state, selection, active tool, active color, circle creation, point-shape creation, movement, deletion, history, text styling, grouping, and nested layer moves.
   - `useDrawingDocument.test.ts` with store-level tests for create, move, point edit, delete, undo/redo, polyline, polygon, brush/text, text options, grouping, nested moves, and transform preservation.
 - `DrawingCanvas.vue` renders the document to a `<canvas>` and supports wheel/button zoom plus pan-tool dragging.
+- `TileEditorWorkspace.vue` overlays a stage-anchored `100ft` scale guide in the lower-right corner of the canvas stage. Its width represents `100` canvas pixels and grows/shrinks with zoom.
 - `LayerManager.vue` displays the flattened layer tree and emits selection changes.
 - `LayerManager.vue` supports nested drag/drop reorder, group/ungroup actions, moving the selected layer into the previous group, moving the selected layer out of its parent group, disabled same-level reorder buttons at edges, and collapsible groups.
 - Selecting a shape in the layer manager highlights that shape and its control points on the canvas.
@@ -56,8 +59,9 @@ This is a handoff note for continuing the tile/editor work.
   - New shapes are inserted at the top-level document order and selected immediately.
 - Selecting a layer automatically activates edit mode.
 - Selected shapes render uniform control points.
+- Selection visuals intentionally use control handles only. Dotted selection bounding boxes were removed because rotated groups/text made them visually misleading.
 - Edit mode drags individual control points.
-- Move mode drags all points in the selected shape at once.
+- Move mode drags all points in the selected shape at once, or updates the selected group's transform when a group is selected.
 - Undo/redo uses shared document snapshots for circle creation, shape moves, and control-point edits.
 - Control-point editing now applies to all first-pass point-based shapes:
   - Dragging normal control points moves individual points.
@@ -69,6 +73,9 @@ This is a handoff note for continuing the tile/editor work.
 - Layers can be reordered by drag/drop before, after, or inside group layers.
 - Selected layers can be wrapped in a new group, selected groups can be ungrouped, and selected layers can be moved into the group above or out of their current parent group.
 - Moving layers into or out of groups preserves their current world transform so they do not jump visually.
+- Group transform controls support X, Y, rotation, scale X, and scale Y from the style panel.
+- Group rotation and scale pivot around the group's content center instead of local `(0, 0)`.
+- Control-point hit testing and dragging for nested shapes converts between world and local coordinates so edits remain stable inside transformed groups.
 - Groups are collapsible in the layer manager so their contents can be hidden while editing.
 - The layer manager clips vertical overflow and scrolls the layer list so large documents do not grow the page height.
 - Brush creation is enabled from the tool rail.
@@ -109,11 +116,11 @@ This is a handoff note for continuing the tile/editor work.
 
 Build the next editing path:
 
-1. Add group transform editing: move, rotate, and resize selected groups using stored group transforms.
-2. Make canvas control-point math transform-aware for nested groups so edits remain correct when parent groups are translated, scaled, or rotated.
-3. Add richer layer affordances: clearer drag/drop targets, group creation from multiple selected layers, and stronger mobile layer controls.
-4. Promote local draft persistence into a server-backed edit-session model with draft save/load endpoints.
-5. Add starting tile image/background support and begin changed-pixel tracking against that baseline.
-6. Add manual save/autosave UI states and lock/expiration display once edit sessions exist.
+1. Add direct canvas handles for group rotate/scale so users do not have to type transform values.
+2. Add richer layer affordances: clearer drag/drop targets, group creation from multiple selected layers, and stronger mobile layer controls.
+3. Promote local draft persistence into a server-backed edit-session model with draft save/load endpoints.
+4. Add starting tile image/background support and begin changed-pixel tracking against that baseline.
+5. Add manual save/autosave UI states and lock/expiration display once edit sessions exist.
+6. Add renderer-oriented document validation before accepting persisted drawing JSON.
 
 Keep server-side rendering, changed-pixel enforcement, and completion flow scoped behind edit sessions so the client document path remains stable.

@@ -21,6 +21,7 @@ export type ShapeControlPoint = {
   nodeId: string
   pointIndex: number
   point: Point
+  localPoint: Point
 }
 
 export type DrawingStyle = {
